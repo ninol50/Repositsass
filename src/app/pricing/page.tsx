@@ -1,0 +1,196 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { SiteFooter } from "@/components/SiteFooter";
+import { SiteHeader } from "@/components/SiteHeader";
+import { Alert, Badge, ButtonLink, SectionHeading, buttonClass } from "@/components/ui";
+import { currentUser } from "@/lib/auth";
+import { hasActivePlan } from "@/lib/types";
+import { planCatalog } from "@/lib/whop";
+
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Tarifs",
+  description:
+    "Débloque le brief complet : design system, architecture, chiffres et plan d'exécution. Paiement via Whop.",
+};
+
+const COMPARISON = [
+  { label: "Positionnement, cible, périmètre", free: true, paid: true },
+  { label: "Design system complet (tokens hex, contraste)", free: false, paid: true },
+  { label: "Direction artistique et prompts d'images", free: false, paid: true },
+  { label: "Architecture, arborescence, schéma SQL", free: false, paid: true },
+  { label: "Calcul MRR, churn, LTV, CAC, trafic", free: false, paid: true },
+  { label: "Grille tarifaire générée", free: false, paid: true },
+  { label: "Plan d'exécution en 5 étapes datées", free: false, paid: true },
+  { label: "Definition of done et garde-fous", free: false, paid: true },
+  { label: "Copie en un clic et export .md", free: false, paid: true },
+];
+
+function Check({ on }: { on: boolean }) {
+  return on ? (
+    <svg className="text-mint-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  ) : (
+    <svg className="text-ink-600" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M18 6 6 18M6 6l12 12" />
+    </svg>
+  );
+}
+
+export default async function PricingPage() {
+  const user = await currentUser();
+  const plans = planCatalog();
+  const active = user ? hasActivePlan(user) : false;
+  const anyCheckout = plans.some((p) => p.checkoutUrl);
+
+  function hrefFor(checkoutUrl: string | null): string {
+    if (!user) return "/signup?next=/pricing";
+    if (!checkoutUrl) return "/billing/verify";
+    const url = new URL(checkoutUrl);
+    // Passed through to the webhook so the payment can be matched to this account.
+    url.searchParams.set("email", user.email);
+    url.searchParams.set("metadata[user_id]", user.id);
+    return url.toString();
+  }
+
+  return (
+    <>
+      <SiteHeader />
+
+      <main>
+        <section className="mx-auto w-full max-w-6xl px-5 pb-16 pt-14 sm:pt-20">
+          <div className="text-center">
+            <Badge>
+              <span className="h-1.5 w-1.5 rounded-full bg-mint-400" />
+              Paiement sécurisé via Whop
+            </Badge>
+          </div>
+
+          <div className="mt-7">
+            <SectionHeading
+              title="Un prix, pas un abonnement piège"
+              description="Tu peux lire le début de chaque brief gratuitement. Le document complet est payant, et il se résilie en un clic depuis ton compte Whop."
+            />
+          </div>
+
+          {active && (
+            <div className="mx-auto mt-10 max-w-xl">
+              <Alert tone="success">
+                Ton plan <strong>{user?.plan}</strong> est actif. Tous tes briefs sont débloqués.{" "}
+                <Link href="/dashboard" className="underline underline-offset-4">
+                  Voir mes briefs
+                </Link>
+              </Alert>
+            </div>
+          )}
+
+          {!anyCheckout && (
+            <div className="mx-auto mt-10 max-w-xl">
+              <Alert tone="warning">
+                Aucun lien de paiement n&apos;est configuré sur ce déploiement. Renseigne les variables
+                <code className="mx-1 rounded bg-black/30 px-1.5 py-0.5 font-mono text-[12px]">WHOP_PLAN_*_ID</code>
+                pour activer le checkout.
+              </Alert>
+            </div>
+          )}
+
+          <div className="mt-14 grid gap-5 lg:grid-cols-3">
+            {plans.map((p) => (
+              <div
+                key={p.key}
+                className={`surface relative flex flex-col p-7 ${p.highlight ? "ring-1 ring-brand-500/40 lg:-mt-4 lg:pb-11" : ""}`}
+              >
+                {p.highlight && (
+                  <span className="absolute -top-2.5 left-7 rounded-full bg-[linear-gradient(120deg,#8f6fff,#6a45f5)] px-2.5 py-1 text-[11px] font-medium text-white">
+                    Le plus pris
+                  </span>
+                )}
+
+                <h2 className="font-display text-[18px] font-semibold text-white">{p.name}</h2>
+                <p className="mt-1 text-[13px] text-ink-400">{p.tagline}</p>
+
+                <p className="mt-6 flex items-baseline gap-1.5">
+                  <span className="font-display text-[42px] font-semibold tracking-tight text-white">{p.price}€</span>
+                  <span className="text-[13px] text-ink-500">{p.period}</span>
+                </p>
+
+                <ul className="mt-7 flex-1 space-y-3">
+                  {p.features.map((f) => (
+                    <li key={f} className="flex gap-2.5 text-[13.5px] leading-snug text-ink-300">
+                      <span className="mt-0.5 shrink-0">
+                        <Check on />
+                      </span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+
+                <a
+                  href={hrefFor(p.checkoutUrl)}
+                  className={buttonClass(p.highlight ? "brand" : "outline", "md", "mt-8 w-full")}
+                  {...(p.checkoutUrl && user ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                >
+                  {!user ? "Créer un compte" : p.checkoutUrl ? `Payer ${p.price}€` : "Vérifier ma licence"}
+                </a>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ------------------------------------------------------ Comparison */}
+        <section className="mx-auto w-full max-w-3xl px-5 py-16">
+          <h2 className="font-display text-[22px] font-semibold tracking-tight text-white">
+            Gratuit contre payant, sans ambiguïté
+          </h2>
+
+          <div className="surface-flat mt-7 overflow-hidden">
+            <div className="grid grid-cols-[1fr_auto_auto] gap-4 border-b border-white/[0.07] px-5 py-3 text-[12px] uppercase tracking-wider text-ink-500">
+              <span>Section du brief</span>
+              <span className="w-16 text-center">Gratuit</span>
+              <span className="w-16 text-center">Payant</span>
+            </div>
+            {COMPARISON.map((row) => (
+              <div
+                key={row.label}
+                className="grid grid-cols-[1fr_auto_auto] items-center gap-4 border-b border-white/[0.05] px-5 py-3.5 last:border-0"
+              >
+                <span className="text-[13.5px] text-ink-200">{row.label}</span>
+                <span className="flex w-16 justify-center">
+                  <Check on={row.free} />
+                </span>
+                <span className="flex w-16 justify-center">
+                  <Check on={row.paid} />
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-10 grid gap-4 sm:grid-cols-2">
+            <div className="surface-flat p-5">
+              <h3 className="text-[14px] font-medium text-white">Déjà payé sur Whop ?</h3>
+              <p className="mt-2 text-[13px] leading-relaxed text-ink-400">
+                Si l&apos;accès ne s&apos;est pas débloqué automatiquement, entre ta clé de licence.
+              </p>
+              <ButtonLink href="/billing/verify" variant="outline" size="sm" className="mt-4">
+                Vérifier ma licence
+              </ButtonLink>
+            </div>
+            <div className="surface-flat p-5">
+              <h3 className="text-[14px] font-medium text-white">Remboursement</h3>
+              <p className="mt-2 text-[13px] leading-relaxed text-ink-400">
+                7 jours, sans justification, tant que le volume d&apos;usage reste raisonnable.
+              </p>
+              <ButtonLink href="/legal/refund" variant="outline" size="sm" className="mt-4">
+                Lire les conditions
+              </ButtonLink>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <SiteFooter />
+    </>
+  );
+}
