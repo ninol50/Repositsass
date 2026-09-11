@@ -17,16 +17,29 @@ const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number) =>
 export const SESSION_COOKIE = "rs_session";
 const SESSION_DAYS = 30;
 
-function secretKey(): Uint8Array {
+export const AUTH_SECRET_MISSING =
+  "Ce déploiement n'a pas de AUTH_SECRET configuré, les comptes sont donc désactivés. " +
+  "Ajoute la variable d'environnement AUTH_SECRET (32 caractères minimum) dans Vercel, puis redéploie.";
+
+/** True when sessions can actually be signed and verified. */
+export function authConfigured(): boolean {
   const raw = process.env.AUTH_SECRET;
-  if (!raw || raw.length < 32) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("AUTH_SECRET manquant ou trop court (32 caracteres minimum).");
-    }
-    // Dev only: stable per-process key so hot reloads keep you logged in.
-    return new TextEncoder().encode("dev-only-insecure-secret-change-me-0123456789");
-  }
-  return new TextEncoder().encode(raw);
+  if (raw && raw.length >= 32) return true;
+  return process.env.NODE_ENV !== "production";
+}
+
+/**
+ * Returns null instead of throwing when the secret is missing, so a
+ * half-configured deployment renders as "logged out" rather than 500-ing every
+ * page. The write path (signup/login) refuses loudly instead — see
+ * `requireAuthConfigured`.
+ */
+function secretKey(): Uint8Array | null {
+  const raw = process.env.AUTH_SECRET;
+  if (raw && raw.length >= 32) return new TextEncoder().encode(raw);
+  if (process.env.NODE_ENV === "production") return null;
+  // Dev only: stable per-process key so hot reloads keep you logged in.
+  return new TextEncoder().encode("dev-only-insecure-secret-change-me-0123456789");
 }
 
 /* ---------------------------- passwords ---------------------------- */
@@ -64,17 +77,21 @@ export function emailProblem(email: string): string | null {
 /* ----------------------------- sessions ---------------------------- */
 
 export async function createSessionToken(userId: string): Promise<string> {
+  const key = secretKey();
+  if (!key) throw new Error(AUTH_SECRET_MISSING);
   return new SignJWT({ sub: userId })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setIssuer("repositsaas")
     .setExpirationTime(`${SESSION_DAYS}d`)
-    .sign(secretKey());
+    .sign(key);
 }
 
 export async function readSessionToken(token: string): Promise<string | null> {
+  const key = secretKey();
+  if (!key) return null;
   try {
-    const { payload } = await jwtVerify(token, secretKey(), { issuer: "repositsaas" });
+    const { payload } = await jwtVerify(token, key, { issuer: "repositsaas" });
     return typeof payload.sub === "string" ? payload.sub : null;
   } catch {
     return null;

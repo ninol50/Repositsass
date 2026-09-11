@@ -6,10 +6,14 @@ import {
 } from "@/lib/auth";
 import { getStore } from "@/lib/db";
 import { clientKey, rateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { setupBlocker } from "@/lib/setup";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  const blocker = setupBlocker();
+  if (blocker) return Response.json({ error: blocker }, { status: 503 });
+
   const limited = rateLimit(clientKey(req, "signup"), 8, 10 * 60_000);
   if (!limited.ok) return tooManyRequests(limited.retryAfter);
 
