@@ -38,11 +38,11 @@ export function planCatalog(): PlanConfig[] {
       name: "Starter",
       price: "19",
       period: "par mois",
-      tagline: "Pour valider une idee ce mois-ci.",
+      tagline: "Pour valider une idée ce mois-ci.",
       features: [
-        "Briefs illimites debloques",
+        "Briefs illimités débloqués",
         "Export Markdown et copie en un clic",
-        "Palette et design system generes",
+        "Palette et design system générés",
         "Calcul MRR, churn, LTV, CAC",
       ],
       checkoutUrl: checkoutUrlFor(process.env.WHOP_PLAN_STARTER_ID, process.env.WHOP_PLAN_STARTER_URL),
@@ -58,8 +58,8 @@ export function planCatalog(): PlanConfig[] {
       features: [
         "Tout le plan Starter",
         "Historique complet et versions",
-        "Plan d'execution detaille par semaine",
-        "Section risques et angles morts etendue",
+        "Plan d'exécution détaillé par semaine",
+        "Section risques et angles morts étendue",
         "Support par email sous 24h",
       ],
       checkoutUrl: checkoutUrlFor(process.env.WHOP_PLAN_PRO_ID, process.env.WHOP_PLAN_PRO_URL),
@@ -70,10 +70,10 @@ export function planCatalog(): PlanConfig[] {
       name: "Lifetime",
       price: "149",
       period: "une fois",
-      tagline: "Un seul paiement, acces permanent.",
+      tagline: "Un seul paiement, accès permanent.",
       features: [
         "Tout le plan Pro",
-        "Acces a vie, sans abonnement",
+        "Accès à vie, sans abonnement",
         "Nouvelles sections incluses",
       ],
       checkoutUrl: checkoutUrlFor(process.env.WHOP_PLAN_LIFETIME_ID, process.env.WHOP_PLAN_LIFETIME_URL),
@@ -150,8 +150,8 @@ export type LicenseCheck =
 
 export async function validateLicenseKey(key: string): Promise<LicenseCheck> {
   const apiKey = process.env.WHOP_API_KEY;
-  if (!apiKey) return { ok: false, reason: "La verification de licence n'est pas configuree sur ce deploiement." };
-  if (!/^[A-Za-z0-9._-]{6,128}$/.test(key)) return { ok: false, reason: "Format de cle invalide." };
+  if (!apiKey) return { ok: false, reason: "La vérification de licence n'est pas configurée sur ce déploiement." };
+  if (!/^[A-Za-z0-9._-]{6,128}$/.test(key)) return { ok: false, reason: "Format de clé invalide." };
 
   try {
     const res = await fetch(`${WHOP_API}/memberships/${encodeURIComponent(key)}/validate_license`, {
@@ -160,8 +160,8 @@ export async function validateLicenseKey(key: string): Promise<LicenseCheck> {
       cache: "no-store",
     });
 
-    if (res.status === 404) return { ok: false, reason: "Cle introuvable." };
-    if (!res.ok) return { ok: false, reason: `Whop a repondu ${res.status}. Reessaie dans un instant.` };
+    if (res.status === 404) return { ok: false, reason: "Clé introuvable." };
+    if (!res.ok) return { ok: false, reason: `Whop a répondu ${res.status}. Réessaie dans un instant.` };
 
     const body = (await res.json()) as {
       id?: string;
