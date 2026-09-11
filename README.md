@@ -45,8 +45,8 @@ actif et ce qui n'est pas configuré.
 | `AUTH_SECRET` | **oui en prod** | Signature des sessions JWT. 32 caractères minimum (`openssl rand -base64 48`). L'app refuse de démarrer en production sans. |
 | `DATABASE_URL` | oui en prod | Postgres standard : Supabase, Neon, Vercel Postgres, Railway. Les tables sont créées au premier appel. Sur Supabase, **utiliser la chaîne « Transaction pooler » (port 6543)** — voir ci-dessous. |
 | `NEXT_PUBLIC_SITE_URL` | recommandé | Métadonnées, sitemap, robots.txt. |
-| `WHOP_PLAN_STARTER_ID` / `_PRO_ID` / `_LIFETIME_ID` | pour vendre | Construit les liens de checkout. |
-| `WHOP_PLAN_*_URL` | optionnel | URL de checkout complètes, prioritaires sur les ID. |
+| `WHOP_PLAN_BASIC_ID` / `_PRO_ID` / `_MAX_ID` | non | Les plans en production sont câblés dans `src/lib/whop.ts` (les IDs sont publics, ils figurent dans l'URL de checkout). Ces variables ne servent qu'à les remplacer. |
+| `WHOP_PLAN_*_URL` | non | URL de checkout complètes, prioritaires sur les ID. |
 | `WHOP_WEBHOOK_SECRET` | pour vendre | Sans lui, **tous** les webhooks sont rejetés et aucun accès n'est accordé. |
 | `WHOP_API_KEY` | optionnel | Active la vérification manuelle de licence sur `/billing/verify`. |
 
@@ -59,8 +59,8 @@ actif et ce qui n'est pas configuré.
 3. Renseigner `AUTH_SECRET` et `NEXT_PUBLIC_SITE_URL`.
 4. Déployer, puis ouvrir `https://<domaine>/api/health` pour vérifier qu'il ne reste
    aucun avertissement.
-5. Côté Whop : créer les plans, coller leurs ID, et pointer le webhook sur
-   `https://<domaine>/api/webhooks/whop` avec le secret correspondant.
+5. Côté Whop : pointer le webhook sur `https://<domaine>/api/webhooks/whop` et
+   renseigner `WHOP_WEBHOOK_SECRET`. Les plans sont déjà câblés.
 
 Aucune commande de migration à lancer : le schéma se crée tout seul au premier appel
 à la base (`CREATE TABLE IF NOT EXISTS`).

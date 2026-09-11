@@ -25,17 +25,45 @@ export type PlanConfig = {
   whopPlanId: string | null;
 };
 
-function checkoutUrlFor(planId: string | undefined, directUrl: string | undefined): string | null {
-  if (directUrl) return directUrl;
-  if (planId) return `https://whop.com/checkout/${planId}`;
-  return null;
+/**
+ * The live Whop plan IDs.
+ *
+ * Not secrets: they are visible in the public checkout URL. Keeping them in
+ * code means the checkout works on a fresh deploy without three environment
+ * variables to get right, and an env var still overrides when a plan changes.
+ */
+const DEFAULT_PLAN_IDS = {
+  basic: "plan_1KQ97EvumwyVZ",
+  pro: "plan_twwbvjaeBdFrI",
+  max: "plan_ctlLmSkxygHV3",
+} as const;
+
+function planId(key: keyof typeof DEFAULT_PLAN_IDS): string | null {
+  const fromEnv = {
+    basic: process.env.WHOP_PLAN_BASIC_ID,
+    pro: process.env.WHOP_PLAN_PRO_ID,
+    max: process.env.WHOP_PLAN_MAX_ID,
+  }[key];
+  return fromEnv?.trim() || DEFAULT_PLAN_IDS[key] || null;
+}
+
+function checkoutUrlFor(key: keyof typeof DEFAULT_PLAN_IDS): string | null {
+  const direct = {
+    basic: process.env.WHOP_PLAN_BASIC_URL,
+    pro: process.env.WHOP_PLAN_PRO_URL,
+    max: process.env.WHOP_PLAN_MAX_URL,
+  }[key];
+  if (direct?.trim()) return direct.trim();
+
+  const id = planId(key);
+  return id ? `https://whop.com/checkout/${id}` : null;
 }
 
 export function planCatalog(): PlanConfig[] {
   return [
     {
-      key: "starter",
-      name: "Starter",
+      key: "basic",
+      name: "Basic",
       price: "19",
       period: "par mois",
       tagline: "Pour valider une idée ce mois-ci.",
@@ -45,8 +73,8 @@ export function planCatalog(): PlanConfig[] {
         "Palette et design system générés",
         "Calcul MRR, churn, LTV, CAC",
       ],
-      checkoutUrl: checkoutUrlFor(process.env.WHOP_PLAN_STARTER_ID, process.env.WHOP_PLAN_STARTER_URL),
-      whopPlanId: process.env.WHOP_PLAN_STARTER_ID ?? null,
+      checkoutUrl: checkoutUrlFor("basic"),
+      whopPlanId: planId("basic"),
     },
     {
       key: "pro",
@@ -56,18 +84,18 @@ export function planCatalog(): PlanConfig[] {
       tagline: "Pour ceux qui lancent plusieurs produits.",
       highlight: true,
       features: [
-        "Tout le plan Starter",
+        "Tout le plan Basic",
         "Historique complet et versions",
         "Plan d'exécution détaillé par semaine",
         "Section risques et angles morts étendue",
         "Support par email sous 24h",
       ],
-      checkoutUrl: checkoutUrlFor(process.env.WHOP_PLAN_PRO_ID, process.env.WHOP_PLAN_PRO_URL),
-      whopPlanId: process.env.WHOP_PLAN_PRO_ID ?? null,
+      checkoutUrl: checkoutUrlFor("pro"),
+      whopPlanId: planId("pro"),
     },
     {
-      key: "lifetime",
-      name: "Lifetime",
+      key: "max",
+      name: "Max",
       price: "149",
       period: "une fois",
       tagline: "Un seul paiement, accès permanent.",
@@ -76,16 +104,29 @@ export function planCatalog(): PlanConfig[] {
         "Accès à vie, sans abonnement",
         "Nouvelles sections incluses",
       ],
-      checkoutUrl: checkoutUrlFor(process.env.WHOP_PLAN_LIFETIME_ID, process.env.WHOP_PLAN_LIFETIME_URL),
-      whopPlanId: process.env.WHOP_PLAN_LIFETIME_ID ?? null,
+      checkoutUrl: checkoutUrlFor("max"),
+      whopPlanId: planId("max"),
     },
   ];
 }
 
+/**
+ * Maps a paid Whop plan to ours.
+ *
+ * An unrecognised plan falls back to the LOWEST paid tier, never the highest:
+ * a mistyped plan ID should under-grant and be noticed, not hand out the top
+ * plan for free. The warning names the ID so it can be fixed.
+ */
 export function planFromWhopPlanId(planId: string | null | undefined): Plan {
-  if (!planId) return "pro";
-  const match = planCatalog().find((p) => p.whopPlanId && p.whopPlanId === planId);
-  return match?.key ?? "pro";
+  const catalog = planCatalog();
+  const match = planId ? catalog.find((p) => p.whopPlanId === planId) : undefined;
+  if (match) return match.key;
+
+  console.warn(
+    `[whop] plan_id inconnu (${planId ?? "absent"}) : accès accordé au plan le plus bas. ` +
+      "Vérifie WHOP_PLAN_BASIC_ID / _PRO_ID / _MAX_ID.",
+  );
+  return catalog[0]?.key ?? "basic";
 }
 
 export function billingConfigured(): boolean {

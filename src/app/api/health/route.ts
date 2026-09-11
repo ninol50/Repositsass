@@ -23,7 +23,7 @@ export async function GET() {
     warnings.push("AUTH_SECRET absent ou trop court : les sessions ne sont pas sûres.");
   }
   if (!billingConfigured()) {
-    warnings.push("Aucun WHOP_PLAN_*_ID configuré : le checkout est indisponible.");
+    warnings.push("Aucun plan Whop résolu : le checkout est indisponible.");
   }
   if (!process.env.WHOP_WEBHOOK_SECRET) {
     warnings.push("WHOP_WEBHOOK_SECRET absent : les webhooks de paiement seront rejetés.");
