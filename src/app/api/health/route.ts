@@ -1,4 +1,4 @@
-import { storageDriver } from "@/lib/db";
+import { describeDatabase, storageDriver } from "@/lib/db";
 import { billingConfigured } from "@/lib/whop";
 
 export const runtime = "nodejs";
@@ -10,10 +10,14 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   const driver = storageDriver();
+  const db = describeDatabase();
   const warnings: string[] = [];
 
   if (driver === "memory") {
     warnings.push("DATABASE_URL absent : les comptes et les briefs disparaissent à chaque redémarrage.");
+  }
+  if (db?.warning) {
+    warnings.push(db.warning);
   }
   if (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.length < 32) {
     warnings.push("AUTH_SECRET absent ou trop court : les sessions ne sont pas sûres.");
@@ -28,6 +32,8 @@ export async function GET() {
   return Response.json({
     status: warnings.length === 0 ? "ok" : "degraded",
     storage: driver,
+    // Host and port only — never the credentials.
+    database: db ? { host: db.host, port: db.port, pooled: db.pooled } : null,
     billing: billingConfigured(),
     warnings,
   });

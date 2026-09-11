@@ -2,7 +2,8 @@
  * Storage layer.
  *
  * Two drivers behind one interface:
- *  - postgres  : used as soon as DATABASE_URL is set (Neon / Vercel Postgres, over HTTP)
+ *  - postgres  : any standard Postgres — Supabase, Neon, Vercel Postgres, Railway,
+ *                or a local cluster. Enabled as soon as DATABASE_URL is set.
  *  - memory    : local development and previews, resets on every cold start
  *
  * The memory driver is deliberately not a fallback we hide: /api/health reports
@@ -331,18 +332,78 @@ class PostgresStore implements Store {
 
 /* ------------------------------------------------------------------ */
 
+export function databaseUrl(): string | null {
+  return process.env.DATABASE_URL || process.env.POSTGRES_URL || null;
+}
+
+function isLocalHost(host: string): boolean {
+  return host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "";
+}
+
+/**
+ * Describes the connection without leaking credentials — used by /api/health.
+ *
+ * Supabase in particular has a trap: the direct connection (port 5432) is
+ * IPv6-only, which Vercel's runtime cannot reach. The transaction pooler
+ * (port 6543) is the one that works, and it needs prepared statements off.
+ */
+export function describeDatabase(): { host: string; port: string; pooled: boolean; warning: string | null } | null {
+  const url = databaseUrl();
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    const port = parsed.port || "5432";
+    const pooled = port === "6543" || parsed.hostname.includes("pooler");
+    let warning: string | null = null;
+
+    if (parsed.hostname.includes("supabase") && !pooled) {
+      warning =
+        "Connexion Supabase directe (port 5432) : elle est en IPv6 uniquement et Vercel ne peut pas l'atteindre. " +
+        "Utilise la chaîne « Transaction pooler » (port 6543).";
+    }
+
+    return { host: parsed.hostname, port, pooled, warning };
+  } catch {
+    return { host: "url invalide", port: "?", pooled: false, warning: "DATABASE_URL n'est pas une URL valide." };
+  }
+}
+
+/** One pooled client per runtime instance, reused across lambda invocations. */
+const globalSql = globalThis as unknown as { __repositsaas_sql?: SqlClient };
+
+function createSqlClient(url: string): SqlClient {
+  if (globalSql.__repositsaas_sql) return globalSql.__repositsaas_sql;
+
+  // Imported lazily so the memory driver needs no database package at runtime.
+  const postgres = require("postgres") as typeof import("postgres");
+  const host = (() => {
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return "";
+    }
+  })();
+
+  const client = postgres(url, {
+    // Serverless: many short-lived instances, so one connection each.
+    max: 1,
+    idle_timeout: 20,
+    connect_timeout: 15,
+    // Required by pgBouncer in transaction mode (Supabase's pooler). Harmless elsewhere.
+    prepare: false,
+    ssl: isLocalHost(host) ? false : "require",
+  }) as unknown as SqlClient;
+
+  globalSql.__repositsaas_sql = client;
+  return client;
+}
+
 let store: Store | null = null;
 
 export function getStore(): Store {
   if (store) return store;
-  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-  if (url) {
-    // Imported lazily so the memory driver needs no database package at runtime.
-    const { neon } = require("@neondatabase/serverless") as typeof import("@neondatabase/serverless");
-    store = new PostgresStore(neon(url) as unknown as SqlClient);
-  } else {
-    store = new MemoryStore();
-  }
+  const url = databaseUrl();
+  store = url ? new PostgresStore(createSqlClient(url)) : new MemoryStore();
   return store;
 }
 

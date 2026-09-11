@@ -43,7 +43,7 @@ actif et ce qui n'est pas configuré.
 | Variable | Requis | Rôle |
 | --- | --- | --- |
 | `AUTH_SECRET` | **oui en prod** | Signature des sessions JWT. 32 caractères minimum (`openssl rand -base64 48`). L'app refuse de démarrer en production sans. |
-| `DATABASE_URL` | oui en prod | Postgres (Neon, Vercel Postgres, Supabase). Les tables sont créées au premier appel. |
+| `DATABASE_URL` | oui en prod | Postgres standard : Supabase, Neon, Vercel Postgres, Railway. Les tables sont créées au premier appel. Sur Supabase, **utiliser la chaîne « Transaction pooler » (port 6543)** — voir ci-dessous. |
 | `NEXT_PUBLIC_SITE_URL` | recommandé | Métadonnées, sitemap, robots.txt. |
 | `WHOP_PLAN_STARTER_ID` / `_PRO_ID` / `_LIFETIME_ID` | pour vendre | Construit les liens de checkout. |
 | `WHOP_PLAN_*_URL` | optionnel | URL de checkout complètes, prioritaires sur les ID. |
@@ -55,7 +55,7 @@ actif et ce qui n'est pas configuré.
 ## Déploiement sur Vercel
 
 1. Pousser le dépôt sur GitHub, puis importer le projet dans Vercel.
-2. Créer une base : **Storage → Postgres** (ou Neon), et copier l'URL dans `DATABASE_URL`.
+2. Créer une base et copier son URL dans `DATABASE_URL` (voir la section Supabase ci-dessous).
 3. Renseigner `AUTH_SECRET` et `NEXT_PUBLIC_SITE_URL`.
 4. Déployer, puis ouvrir `https://<domaine>/api/health` pour vérifier qu'il ne reste
    aucun avertissement.
@@ -64,6 +64,29 @@ actif et ce qui n'est pas configuré.
 
 Aucune commande de migration à lancer : le schéma se crée tout seul au premier appel
 à la base (`CREATE TABLE IF NOT EXISTS`).
+
+### Supabase : le piège à connaître
+
+Supabase propose deux chaînes de connexion. **Une seule fonctionne sur Vercel.**
+
+| Chaîne | Port | Sur Vercel |
+| --- | --- | --- |
+| Direct connection | 5432 | ❌ IPv6 uniquement, injoignable depuis les fonctions Vercel |
+| **Transaction pooler** | **6543** | ✅ celle qu'il faut |
+
+Chemin : **Settings → Database → Connection string → Transaction pooler**.
+
+```
+postgresql://postgres.<ref>:<mot-de-passe>@aws-0-<region>.pooler.supabase.com:6543/postgres
+```
+
+Le pooler tourne en mode transaction, ce qui interdit les requêtes préparées :
+le client est donc configuré avec `prepare: false` (`src/lib/db.ts`). Si tu colles
+la mauvaise chaîne, `/api/health` te le dit explicitement au lieu de te laisser
+avec un timeout inexpliqué.
+
+Le projet n'utilise ni `supabase-js`, ni Supabase Auth, ni les RLS : uniquement
+Postgres. Les sessions restent gérées par l'application (scrypt + JWT).
 
 ---
 
@@ -106,7 +129,7 @@ src/
 │   ├── questions.ts             schéma du questionnaire + validation serveur
 │   ├── color.ts                 dérivation de palette, contraste WCAG
 │   ├── markdown.ts              rendu Markdown (échappement avant transformation)
-│   ├── db.ts                    stockage : driver Postgres ou mémoire
+│   ├── db.ts                    stockage : Postgres (postgres.js) ou mémoire
 │   ├── auth.ts                  scrypt + sessions JWT
 │   ├── whop.ts                  catalogue de plans, webhook, licences
 │   └── rate-limit.ts            limitation de débit en mémoire
