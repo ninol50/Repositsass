@@ -45,6 +45,7 @@ actif et ce qui n'est pas configuré.
 | `AUTH_SECRET` | **oui en prod** | Signature des sessions JWT. 32 caractères minimum (`openssl rand -base64 48`). L'app refuse de démarrer en production sans. |
 | `DATABASE_URL` | oui en prod | Postgres standard : Supabase, Neon, Vercel Postgres, Railway. Les tables sont créées au premier appel. Sur Supabase, **utiliser la chaîne « Transaction pooler » (port 6543)** — voir ci-dessous. |
 | `NEXT_PUBLIC_SITE_URL` | recommandé | Métadonnées, sitemap, robots.txt. |
+| `ADMIN_EMAILS` | pour voir les inscrits | Emails séparés par des virgules autorisés sur `/admin`. Non renseigné : la page est inaccessible à tout le monde. |
 | `WHOP_PLAN_BASIC_ID` / `_PRO_ID` / `_MAX_ID` | non | Les plans en production sont câblés dans `src/lib/whop.ts` (les IDs sont publics, ils figurent dans l'URL de checkout). Ces variables ne servent qu'à les remplacer. |
 | `WHOP_PLAN_*_URL` | non | URL de checkout complètes, prioritaires sur les ID. |
 | `WHOP_WEBHOOK_SECRET` | pour vendre | Sans lui, **tous** les webhooks sont rejetés et aucun accès n'est accordé. |
@@ -121,6 +122,7 @@ src/
 │   ├── result/[id]/             brief généré + paywall
 │   ├── pricing/  faq/  legal/   pages publiques
 │   ├── dashboard/               espace connecté
+│   ├── admin/                   back-office : liste des inscrits
 │   ├── billing/verify/          récupération de licence
 │   └── api/                     auth, generate, reviews, billing, webhooks, health
 ├── components/                  UI (serveur + client)
@@ -178,4 +180,5 @@ Aucun témoignage n'est écrit en dur dans le code — et il ne faut pas en ajou
 - [ ] Limitation de débit sur un store partagé
 - [ ] Page de gestion d'abonnement (aujourd'hui : lien vers Whop)
 - [ ] Analytics produit (activation, passage payant, churn)
+- [x] Back-office listant les inscrits (`/admin`, protégé par `ADMIN_EMAILS`)
 - [ ] Compléter les pages légales : identité de l'éditeur, juridiction, contact

@@ -11,7 +11,7 @@
  */
 
 import { randomUUID } from "crypto";
-import type { Generation, Plan, Review, User } from "./types";
+import { hasActivePlan, type Generation, type Plan, type Review, type User } from "./types";
 
 export type Driver = "postgres" | "memory";
 
@@ -38,7 +38,29 @@ export interface Store {
   reviewStats(): Promise<{ count: number; average: number }>;
   /** Real round-trip to the store, so a health check proves more than config parsing. */
   ping(): Promise<PingResult>;
+  /** Back-office: the signed-up accounts, newest first. */
+  listUsers(limit?: number): Promise<AdminUser[]>;
+  adminStats(): Promise<AdminStats>;
 }
+
+/** A row of the admin table. Never carries the password hash. */
+export type AdminUser = {
+  id: string;
+  email: string;
+  plan: Plan;
+  planSource: string | null;
+  planExpiresAt: string | null;
+  createdAt: string;
+  generationCount: number;
+};
+
+export type AdminStats = {
+  users: number;
+  paying: number;
+  generations: number;
+  reviews: number;
+  signupsLast7Days: number;
+};
 
 export type PingResult = { ok: true; latencyMs: number } | { ok: false; error: string };
 
@@ -155,6 +177,34 @@ class MemoryStore implements Store {
 
   async ping(): Promise<PingResult> {
     return { ok: true, latencyMs: 0 };
+  }
+
+  async listUsers(limit = 200): Promise<AdminUser[]> {
+    const gens = [...memoryState().generations.values()];
+    return [...memoryState().users.values()]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit)
+      .map((u) => ({
+        id: u.id,
+        email: u.email,
+        plan: u.plan,
+        planSource: u.planSource,
+        planExpiresAt: u.planExpiresAt,
+        createdAt: u.createdAt,
+        generationCount: gens.filter((g) => g.userId === u.id).length,
+      }));
+  }
+
+  async adminStats(): Promise<AdminStats> {
+    const users = [...memoryState().users.values()];
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    return {
+      users: users.length,
+      paying: users.filter((u) => hasActivePlan(u)).length,
+      generations: memoryState().generations.size,
+      reviews: memoryState().reviews.size,
+      signupsLast7Days: users.filter((u) => new Date(u.createdAt).getTime() > weekAgo).length,
+    };
   }
 }
 
@@ -342,6 +392,48 @@ class PostgresStore implements Store {
    * and authenticate" from "are the migrations applied". A wrong password shows
    * up here as a credentials error rather than a confusing migration failure.
    */
+  async listUsers(limit = 200): Promise<AdminUser[]> {
+    await this.init();
+    const rows = await this.sql`
+      SELECT u.id, u.email, u.plan, u.plan_source, u.plan_expires_at, u.created_at,
+             count(g.id)::int AS generation_count
+      FROM users u
+      LEFT JOIN generations g ON g.user_id = u.id
+      GROUP BY u.id
+      ORDER BY u.created_at DESC
+      LIMIT ${limit}`;
+    return rows.map((r) => ({
+      id: String(r.id),
+      email: String(r.email),
+      plan: String(r.plan) as Plan,
+      planSource: r.plan_source ? String(r.plan_source) : null,
+      planExpiresAt: r.plan_expires_at ? new Date(String(r.plan_expires_at)).toISOString() : null,
+      createdAt: new Date(String(r.created_at)).toISOString(),
+      generationCount: Number(r.generation_count ?? 0),
+    }));
+  }
+
+  async adminStats(): Promise<AdminStats> {
+    await this.init();
+    const rows = await this.sql`
+      SELECT
+        (SELECT count(*)::int FROM users) AS users,
+        (SELECT count(*)::int FROM users
+          WHERE plan <> 'free'
+            AND (plan_expires_at IS NULL OR plan_expires_at > now())) AS paying,
+        (SELECT count(*)::int FROM generations) AS generations,
+        (SELECT count(*)::int FROM reviews) AS reviews,
+        (SELECT count(*)::int FROM users WHERE created_at > now() - interval '7 days') AS signups_last_7_days`;
+    const r = rows[0] ?? {};
+    return {
+      users: Number(r.users ?? 0),
+      paying: Number(r.paying ?? 0),
+      generations: Number(r.generations ?? 0),
+      reviews: Number(r.reviews ?? 0),
+      signupsLast7Days: Number(r.signups_last_7_days ?? 0),
+    };
+  }
+
   async ping(): Promise<PingResult> {
     const started = Date.now();
     try {
