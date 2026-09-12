@@ -16,14 +16,37 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
 }
 
-export async function ReviewsSection() {
+/**
+ * Reads the database, but never takes the landing page down with it.
+ *
+ * This section sits on `/`, the page that must stay up when everything else is
+ * broken: a misconfigured DATABASE_URL should cost us the reviews, not the
+ * whole marketing site.
+ */
+async function loadReviews() {
   const store = getStore();
-  const [reviews, stats, user] = await Promise.all([
-    store.listReviews(9),
-    store.reviewStats(),
-    currentUser(),
-  ]);
-  const existing = user ? await store.getReviewByUser(user.id) : null;
+  try {
+    const [reviews, stats, user] = await Promise.all([
+      store.listReviews(9),
+      store.reviewStats(),
+      currentUser(),
+    ]);
+    const existing = user ? await store.getReviewByUser(user.id) : null;
+    return { reviews, stats, user, existing, degraded: false };
+  } catch (err) {
+    console.error("[reviews] lecture impossible, section affichée vide", err);
+    return {
+      reviews: [] as Awaited<ReturnType<typeof store.listReviews>>,
+      stats: { count: 0, average: 0 },
+      user: null,
+      existing: null,
+      degraded: true,
+    };
+  }
+}
+
+export async function ReviewsSection() {
+  const { reviews, stats, user, existing, degraded } = await loadReviews();
 
   return (
     <section id="avis" className="mx-auto w-full max-w-6xl scroll-mt-24 px-5 py-20 sm:py-28">
@@ -82,7 +105,7 @@ export async function ReviewsSection() {
         </div>
 
         <div>
-          {user ? (
+          {user && !degraded ? (
             <ReviewForm
               existing={existing ? { rating: existing.rating, body: existing.body, authorName: existing.authorName } : null}
               defaultName={user.email.split("@")[0]}
