@@ -9,7 +9,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * route handler re-checks the session server-side.
  */
 
-const PROTECTED = ["/dashboard", "/result", "/billing", "/admin", "/ideas"];
+const PROTECTED = ["/dashboard", "/result", "/billing", "/admin", "/ideas", "/guide"];
 const SESSION_COOKIE = "rs_session";
 
 function secretKey(): Uint8Array | null {
@@ -49,5 +49,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/result/:path*", "/billing/:path*", "/admin/:path*", "/ideas/:path*"],
+  matcher: ["/dashboard/:path*", "/result/:path*", "/billing/:path*", "/admin/:path*", "/ideas/:path*", "/guide/:path*"],
 };

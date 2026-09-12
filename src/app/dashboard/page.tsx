@@ -95,6 +95,14 @@ export default async function DashboardPage() {
               {caps.ideaCatalog ? "débloqué" : "verrouillé"}
             </p>
           </div>
+          {caps.guide && (
+            <Link
+              href="/guide"
+              className="ml-auto inline-flex h-10 items-center rounded-xl border border-white/12 px-4 text-[13.5px] text-white transition-colors hover:bg-white/[0.05]"
+            >
+              Ouvrir le guide
+            </Link>
+          )}
         </div>
 
         {!unlocked && (

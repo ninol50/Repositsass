@@ -26,6 +26,7 @@ const COMPARISON: { label: string; free: string | boolean; basic: string | boole
   { label: "Plan d'acquisition 90 jours", free: false, basic: false, pro: true },
   { label: "Instrumentation et seuils d'alerte", free: false, basic: false, pro: true },
   { label: "Risques d'exécution et points de décision", free: false, basic: false, pro: true },
+  { label: "Guide complet : installer, connecteurs, mise en ligne", free: false, basic: false, pro: true },
   { label: "Catalogue d'idées validées", free: false, basic: false, pro: true },
   { label: "Pré-remplissage « Copier ce site »", free: false, basic: false, pro: true },
 ];

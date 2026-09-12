@@ -33,6 +33,7 @@ et la page tarifs lisent tous ce fichier.
 | Lire le contenu | non | oui | oui | oui |
 | Sections | — | 12 | 16 | 16 |
 | Catalogue d'idées | non | non | oui | oui |
+| Guide complet (`/guide`) | non | non | oui | oui |
 | Pré-remplissage | non | non | oui | oui |
 
 Le compte gratuit peut générer : il voit le titre, la longueur exacte et la liste des
@@ -145,6 +146,7 @@ src/
 │   ├── dashboard/               espace connecté
 │   ├── admin/                   back-office : liste des inscrits
 │   ├── ideas/                   catalogue d'idées (Pro)
+│   ├── guide/                   guide brief → site en ligne (Pro)
 │   ├── billing/verify/          récupération de licence
 │   └── api/                     auth, generate, reviews, billing, webhooks, health
 ├── components/                  UI (serveur + client)
@@ -194,6 +196,22 @@ affiche un état vide qui le dit explicitement. Un compte ne peut publier qu'un 
 et seulement après avoir généré au moins un brief.
 
 Aucun témoignage n'est écrit en dur dans le code — et il ne faut pas en ajouter.
+
+---
+
+## Guide (`/guide`)
+
+Chaque commande de la page est citée **verbatim depuis la documentation officielle**
+de Claude Code (code.claude.com/docs), vérifiée au moment de l'écriture.
+
+Les prix de Claude Code ne sont **volontairement pas reproduits** : ils changent, et
+un guide qui affiche un prix périmé se transforme en ticket de support. La page
+renvoie vers claude.com/pricing.
+
+Même règle pour les URL de serveurs MCP : seules celles présentes dans la
+documentation officielle sont citées. Pour les autres fournisseurs, la page donne la
+forme de la commande et dit d'aller chercher l'URL à la source plutôt que de la
+deviner.
 
 ---
 

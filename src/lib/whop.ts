@@ -90,6 +90,7 @@ export function planCatalog(): PlanConfig[] {
         "Plan d'acquisition sur 90 jours, chiffré",
         "Instrumentation et seuils d'alerte",
         "Catalogue d'idées validées + pré-remplissage en un clic",
+        "Guide complet : Claude Code, connecteurs MCP, mise en ligne",
       ],
       checkoutUrl: checkoutUrlFor("pro"),
       whopPlanId: planId("pro"),

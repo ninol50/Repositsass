@@ -19,6 +19,8 @@ export type PlanCapabilities = {
   ideaCatalog: boolean;
   /** One-click prefill of the questionnaire from a catalogue entry. */
   autofill: boolean;
+  /** The step-by-step guide from brief to deployed site. */
+  guide: boolean;
 };
 
 export const CAPABILITIES: Record<Plan, PlanCapabilities> = {
@@ -30,6 +32,7 @@ export const CAPABILITIES: Record<Plan, PlanCapabilities> = {
     briefDepth: "standard",
     ideaCatalog: false,
     autofill: false,
+    guide: false,
   },
   basic: {
     monthlyGenerations: 10,
@@ -37,6 +40,7 @@ export const CAPABILITIES: Record<Plan, PlanCapabilities> = {
     briefDepth: "standard",
     ideaCatalog: false,
     autofill: false,
+    guide: false,
   },
   pro: {
     monthlyGenerations: 30,
@@ -44,6 +48,7 @@ export const CAPABILITIES: Record<Plan, PlanCapabilities> = {
     briefDepth: "pro",
     ideaCatalog: true,
     autofill: true,
+    guide: true,
   },
   max: {
     monthlyGenerations: null,
@@ -51,6 +56,7 @@ export const CAPABILITIES: Record<Plan, PlanCapabilities> = {
     briefDepth: "pro",
     ideaCatalog: true,
     autofill: true,
+    guide: true,
   },
 };
 
