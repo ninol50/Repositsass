@@ -36,7 +36,11 @@ export interface Store {
   listReviews(limit?: number): Promise<Review[]>;
   getReviewByUser(userId: string): Promise<Review | null>;
   reviewStats(): Promise<{ count: number; average: number }>;
+  /** Real round-trip to the store, so a health check proves more than config parsing. */
+  ping(): Promise<PingResult>;
 }
+
+export type PingResult = { ok: true; latencyMs: number } | { ok: false; error: string };
 
 /* ------------------------------------------------------------------ */
 /* Memory driver                                                       */
@@ -147,6 +151,10 @@ class MemoryStore implements Store {
     if (all.length === 0) return { count: 0, average: 0 };
     const avg = all.reduce((sum, r) => sum + r.rating, 0) / all.length;
     return { count: all.length, average: Math.round(avg * 10) / 10 };
+  }
+
+  async ping(): Promise<PingResult> {
+    return { ok: true, latencyMs: 0 };
   }
 }
 
@@ -327,6 +335,29 @@ class PostgresStore implements Store {
     const count = Number(rows[0]?.n ?? 0);
     const average = Math.round(Number(rows[0]?.avg ?? 0) * 10) / 10;
     return { count, average };
+  }
+
+  /**
+   * Deliberately does NOT run init(): this separates "can we reach the database
+   * and authenticate" from "are the migrations applied". A wrong password shows
+   * up here as a credentials error rather than a confusing migration failure.
+   */
+  async ping(): Promise<PingResult> {
+    const started = Date.now();
+    try {
+      await this.sql`SELECT 1 AS ok`;
+      return { ok: true, latencyMs: Date.now() - started };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const code = (err as { code?: string }).code;
+      if (code === "28P01") {
+        return { ok: false, error: "Mot de passe incorrect dans DATABASE_URL (le placeholder [YOUR-PASSWORD] a-t-il bien été remplacé ?)." };
+      }
+      if (code === "ENOTFOUND" || code === "ECONNREFUSED" || code === "ETIMEDOUT") {
+        return { ok: false, error: `Base injoignable (${code}). Vérifie l'hôte et le port de DATABASE_URL.` };
+      }
+      return { ok: false, error: message.slice(0, 200) };
+    }
   }
 }
 
