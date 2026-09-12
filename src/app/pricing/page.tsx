@@ -15,17 +15,27 @@ export const metadata: Metadata = {
     "Débloque le brief complet : design system, architecture, chiffres et plan d'exécution. Paiement via Whop.",
 };
 
-const COMPARISON = [
-  { label: "Positionnement, cible, périmètre", free: true, paid: true },
-  { label: "Design system complet (tokens hex, contraste)", free: false, paid: true },
-  { label: "Direction artistique et prompts d'images", free: false, paid: true },
-  { label: "Architecture, arborescence, schéma SQL", free: false, paid: true },
-  { label: "Calcul MRR, churn, LTV, CAC, trafic", free: false, paid: true },
-  { label: "Grille tarifaire générée", free: false, paid: true },
-  { label: "Plan d'exécution en 5 étapes datées", free: false, paid: true },
-  { label: "Definition of done et garde-fous", free: false, paid: true },
-  { label: "Copie en un clic et export .md", free: false, paid: true },
+const COMPARISON: { label: string; free: string | boolean; basic: string | boolean; pro: string | boolean }[] = [
+  { label: "Briefs générés par mois", free: "5", basic: "10", pro: "30" },
+  { label: "Lire le contenu du brief", free: false, basic: true, pro: true },
+  { label: "Sections du document", free: "—", basic: "12", pro: "16" },
+  { label: "Design system, architecture, schéma SQL", free: false, basic: true, pro: true },
+  { label: "Calcul MRR, churn, LTV, CAC", free: false, basic: true, pro: true },
+  { label: "Copie en un clic et export .md", free: false, basic: true, pro: true },
+  { label: "Analyse concurrentielle", free: false, basic: false, pro: true },
+  { label: "Plan d'acquisition 90 jours", free: false, basic: false, pro: true },
+  { label: "Instrumentation et seuils d'alerte", free: false, basic: false, pro: true },
+  { label: "Risques d'exécution et points de décision", free: false, basic: false, pro: true },
+  { label: "Catalogue d'idées validées", free: false, basic: false, pro: true },
+  { label: "Pré-remplissage « Copier ce site »", free: false, basic: false, pro: true },
 ];
+
+function Cell({ value }: { value: string | boolean }) {
+  if (typeof value === "string") {
+    return <span className="text-[13px] text-ink-200">{value}</span>;
+  }
+  return <Check on={value} />;
+}
 
 function Check({ on }: { on: boolean }) {
   return on ? (
@@ -70,8 +80,8 @@ export default async function PricingPage() {
 
           <div className="mt-7">
             <SectionHeading
-              title="Un prix, pas un abonnement piège"
-              description="Tu peux lire le début de chaque brief gratuitement. Le document complet est payant, et il se résilie en un clic depuis ton compte Whop."
+              title="Générer est gratuit. Lire ne l'est pas."
+              description="Tu génères jusqu'à 5 briefs par mois sans payer et tu vois leur longueur exacte et le détail de leurs sections. Pour en lire le contenu, il faut un plan — résiliable en un clic depuis Whop."
             />
           </div>
 
@@ -142,26 +152,30 @@ export default async function PricingPage() {
         {/* ------------------------------------------------------ Comparison */}
         <section className="mx-auto w-full max-w-3xl px-5 py-16">
           <h2 className="font-display text-[22px] font-semibold tracking-tight text-white">
-            Gratuit contre payant, sans ambiguïté
+            Ce que chaque plan débloque
           </h2>
 
           <div className="surface-flat mt-7 overflow-hidden">
-            <div className="grid grid-cols-[1fr_auto_auto] gap-4 border-b border-white/[0.07] px-5 py-3 text-[12px] uppercase tracking-wider text-ink-500">
-              <span>Section du brief</span>
-              <span className="w-16 text-center">Gratuit</span>
-              <span className="w-16 text-center">Payant</span>
+            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3 border-b border-white/[0.07] px-5 py-3 text-[12px] uppercase tracking-wider text-ink-500">
+              <span>Ce que tu obtiens</span>
+              <span className="w-14 text-center">Gratuit</span>
+              <span className="w-14 text-center">Basic</span>
+              <span className="w-14 text-center">Pro</span>
             </div>
             {COMPARISON.map((row) => (
               <div
                 key={row.label}
-                className="grid grid-cols-[1fr_auto_auto] items-center gap-4 border-b border-white/[0.05] px-5 py-3.5 last:border-0"
+                className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 border-b border-white/[0.05] px-5 py-3.5 last:border-0"
               >
                 <span className="text-[13.5px] text-ink-200">{row.label}</span>
-                <span className="flex w-16 justify-center">
-                  <Check on={row.free} />
+                <span className="flex w-14 justify-center">
+                  <Cell value={row.free} />
                 </span>
-                <span className="flex w-16 justify-center">
-                  <Check on={row.paid} />
+                <span className="flex w-14 justify-center">
+                  <Cell value={row.basic} />
+                </span>
+                <span className="flex w-14 justify-center">
+                  <Cell value={row.pro} />
                 </span>
               </div>
             ))}

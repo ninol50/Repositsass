@@ -42,7 +42,7 @@ export default function TermsPage() {
 
       <LegalSection title="4. Accès payant">
         <p>
-          Une partie du contenu généré est accessible gratuitement. L&apos;accès au document complet
+          La génération est gratuite dans la limite du quota mensuel. L&apos;accès au contenu du document
           nécessite un plan actif, payé via Whop. L&apos;accès est accordé après confirmation du paiement
           par le prestataire. Les abonnements se renouvellent automatiquement jusqu&apos;à résiliation,
           qui s&apos;effectue depuis ton compte Whop.

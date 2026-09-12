@@ -28,7 +28,7 @@ const FAQ = [
   },
   {
     q: "Qu'est-ce qui est gratuit et qu'est-ce qui est payant ?",
-    a: "Le questionnaire, la génération et les sections 0 à 2 (rôle, produit, périmètre) sont gratuites. Les 9 sections suivantes demandent un plan actif. Tu vois donc la qualité réelle du document avant de payer.",
+    a: "Le compte et la génération sont gratuits : tu peux produire jusqu'à 5 briefs par mois sans payer. En revanche aucune ligne du document n'est lisible sans plan actif — tu vois son titre, sa longueur exacte et le détail de ses 12 à 16 sections, pas leur contenu. Basic donne 10 briefs par mois, Pro 30 avec 4 sections supplémentaires, Max sans limite.",
   },
   {
     q: "Les chiffres de la section monétisation sont fiables ?",
@@ -85,8 +85,8 @@ export default function FaqPage() {
         <div className="surface mt-14 p-8 text-center">
           <h2 className="font-display text-[20px] font-semibold text-white">Une autre question ?</h2>
           <p className="mt-2.5 text-[14px] text-ink-400">
-            Le plus simple reste de générer un brief et de juger sur pièce. La partie gratuite suffit à
-            voir si ça vaut le coup.
+            Génère un brief gratuitement : tu verras sa longueur réelle et le détail de ce qu'il contient
+            avant de décider.
           </p>
           <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
             <ButtonLink href="/brief" variant="brand">

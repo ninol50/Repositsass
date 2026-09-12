@@ -20,7 +20,28 @@ de churn et de LTV, sélection d'architecture). Conséquences directes :
 - les idées des utilisateurs ne sont envoyées à aucun fournisseur tiers.
 
 Le brief n'est pas stocké : seules les réponses le sont, et le document est régénéré
-à l'affichage.
+à l'affichage — à la profondeur que le plan de l'utilisateur autorise.
+
+## Ce que chaque plan débloque
+
+Source unique : `src/lib/plans.ts`. Le paywall, le quota, la profondeur du document
+et la page tarifs lisent tous ce fichier.
+
+| | Gratuit | Basic | Pro | Max |
+| --- | --- | --- | --- | --- |
+| Briefs par mois | 5 | 10 | 30 | illimité |
+| Lire le contenu | non | oui | oui | oui |
+| Sections | — | 12 | 16 | 16 |
+| Catalogue d'idées | non | non | oui | oui |
+| Pré-remplissage | non | non | oui | oui |
+
+Le compte gratuit peut générer : il voit le titre, la longueur exacte et la liste des
+sections de son brief, mais **aucune ligne de contenu n'est envoyée au navigateur** —
+le branchement a lieu côté serveur, le markdown n'est jamais sérialisé dans cette
+branche.
+
+Les quatre sections Pro (analyse concurrentielle, plan d'acquisition 90 jours,
+instrumentation, risques d'exécution) ajoutent environ 48% de contenu au document.
 
 ---
 
@@ -123,6 +144,7 @@ src/
 │   ├── pricing/  faq/  legal/   pages publiques
 │   ├── dashboard/               espace connecté
 │   ├── admin/                   back-office : liste des inscrits
+│   ├── ideas/                   catalogue d'idées (Pro)
 │   ├── billing/verify/          récupération de licence
 │   └── api/                     auth, generate, reviews, billing, webhooks, health
 ├── components/                  UI (serveur + client)
@@ -133,6 +155,8 @@ src/
 │   ├── markdown.ts              rendu Markdown (échappement avant transformation)
 │   ├── db.ts                    stockage : Postgres (postgres.js) ou mémoire
 │   ├── auth.ts                  scrypt + sessions JWT
+│   ├── plans.ts                 capacités et quotas par plan
+│   ├── ideas.ts                 catalogue d'idées (vide par défaut)
 │   ├── whop.ts                  catalogue de plans, webhook, licences
 │   └── rate-limit.ts            limitation de débit en mémoire
 └── middleware.ts                redirection Edge pour les routes protégées

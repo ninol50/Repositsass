@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 const POINTS = [
   "Génère autant de briefs que tu veux",
   "Retrouve-les dans ton espace, à tout moment",
-  "Le début de chaque brief est lisible gratuitement",
+  "5 briefs par mois en gratuit, lecture débloquée par un plan",
 ];
 
 export default async function SignupPage({

@@ -7,6 +7,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { ButtonLink } from "@/components/ui";
 import { currentUser } from "@/lib/auth";
 import { getStore } from "@/lib/db";
+import { capabilitiesFor, currentPeriodStart, nextResetLabel, quotaLabel } from "@/lib/plans";
 import { computeMath } from "@/lib/prompt-engine";
 import { hasActivePlan } from "@/lib/types";
 
@@ -29,8 +30,16 @@ export default async function DashboardPage() {
   const user = await currentUser();
   if (!user) redirect("/login?next=/dashboard");
 
-  const generations = await getStore().listGenerations(user.id, 60);
-  const unlocked = hasActivePlan(user);
+  const store = getStore();
+  const active = hasActivePlan(user);
+  const caps = capabilitiesFor(user.plan, active);
+  const [generations, usedThisMonth] = await Promise.all([
+    store.listGenerations(user.id, 60),
+    store.countGenerationsSince(user.id, currentPeriodStart()),
+  ]);
+  const unlocked = caps.canReadBrief;
+  const remaining =
+    caps.monthlyGenerations === null ? null : Math.max(0, caps.monthlyGenerations - usedThisMonth);
 
   return (
     <>
@@ -44,12 +53,12 @@ export default async function DashboardPage() {
             </h1>
             <p className="mt-2 text-[14px] text-ink-400">
               {user.email} ·{" "}
-              {unlocked ? (
+              {active ? (
                 <span className="text-mint-400">plan {user.plan} actif</span>
               ) : (
                 <span className="text-ink-500">plan gratuit</span>
               )}
-              {user.planExpiresAt && unlocked && (
+              {user.planExpiresAt && active && (
                 <span className="text-ink-500"> · renouvellement le {formatDate(user.planExpiresAt)}</span>
               )}
             </p>
@@ -62,12 +71,39 @@ export default async function DashboardPage() {
           </div>
         </header>
 
+        <div className="surface-flat mt-8 flex flex-wrap items-center gap-x-8 gap-y-3 px-5 py-4">
+          <div>
+            <p className="text-[12px] uppercase tracking-wider text-ink-500">Briefs ce mois-ci</p>
+            <p className="mt-1 text-[15px] font-medium text-white">
+              {usedThisMonth} / {quotaLabel(caps.monthlyGenerations)}
+              {remaining !== null && remaining === 0 && (
+                <span className="ml-2 text-[13px] font-normal text-amber-300">
+                  limite atteinte, remise à zéro le {nextResetLabel()}
+                </span>
+              )}
+            </p>
+          </div>
+          <div>
+            <p className="text-[12px] uppercase tracking-wider text-ink-500">Profondeur</p>
+            <p className="mt-1 text-[15px] font-medium text-white">
+              {caps.briefDepth === "pro" ? "16 sections (Pro)" : "12 sections"}
+            </p>
+          </div>
+          <div>
+            <p className="text-[12px] uppercase tracking-wider text-ink-500">Catalogue d&apos;idées</p>
+            <p className="mt-1 text-[15px] font-medium text-white">
+              {caps.ideaCatalog ? "débloqué" : "verrouillé"}
+            </p>
+          </div>
+        </div>
+
         {!unlocked && (
-          <div className="surface mt-8 flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="surface mt-6 flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-[15px] font-medium text-white">Tes briefs sont partiellement verrouillés</p>
+              <p className="text-[15px] font-medium text-white">Tes briefs sont verrouillés</p>
               <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-400">
-                Tu lis le positionnement et le périmètre. Les 9 autres sections demandent un plan actif.
+                Tu peux en générer {caps.monthlyGenerations} par mois et voir leur longueur exacte,
+                mais aucune ligne n&apos;est lisible sans plan actif.
               </p>
             </div>
             <ButtonLink href="/pricing" variant="brand" className="shrink-0">

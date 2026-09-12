@@ -113,7 +113,7 @@ export default function HomePage() {
             </div>
 
             <p className="mt-6 text-[13px] text-ink-500">
-              Le début du brief est gratuit. Le document complet demande un compte et un plan actif.
+              Compte gratuit pour générer. Un plan actif pour lire le brief.
             </p>
 
             <dl className="mt-16 grid w-full max-w-3xl grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.06] sm:grid-cols-4">
@@ -189,7 +189,7 @@ export default function HomePage() {
           <SectionHeading
             eyebrow="Tarifs"
             title="Tester ne coûte rien. Le brief complet, si."
-            description="Tu vois le positionnement, la cible et le périmètre gratuitement. Le design system, l'architecture, les chiffres et le plan d'exécution sont derrière le paiement."
+            description="Générer est gratuit, lire ne l'est pas. Tu vois la longueur exacte de ton brief et le détail de ses sections avant de payer — pas leur contenu."
           />
 
           <div className="mt-14 grid gap-5 md:grid-cols-3">

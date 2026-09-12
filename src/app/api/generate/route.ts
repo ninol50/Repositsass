@@ -1,8 +1,11 @@
 import { currentUser } from "@/lib/auth";
 import { getStore } from "@/lib/db";
+import { capabilitiesFor, currentPeriodStart, nextResetLabel } from "@/lib/plans";
 import { generatePrompt } from "@/lib/prompt-engine";
 import { validateAnswers } from "@/lib/questions";
 import { clientKey, rateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { databaseFailure, isDatabaseError } from "@/lib/setup";
+import { hasActivePlan } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -25,13 +28,38 @@ export async function POST(req: Request) {
     );
   }
 
-  const result = generatePrompt(validation.answers);
-  const generation = await getStore().createGeneration({
-    userId: user.id,
-    productName: result.productName,
-    summary: result.summary,
-    answers: validation.answers,
-  });
+  try {
+    const store = getStore();
+    const caps = capabilitiesFor(user.plan, hasActivePlan(user));
 
-  return Response.json({ id: generation.id, productName: result.productName }, { status: 201 });
+    // Monthly quota, enforced server-side: the client never decides this.
+    if (caps.monthlyGenerations !== null) {
+      const used = await store.countGenerationsSince(user.id, currentPeriodStart());
+      if (used >= caps.monthlyGenerations) {
+        return Response.json(
+          {
+            error:
+              `Tu as atteint ta limite de ${caps.monthlyGenerations} briefs ce mois-ci. ` +
+              `Elle se remet à zéro le ${nextResetLabel()}.`,
+            quota: { used, limit: caps.monthlyGenerations },
+            upgrade: true,
+          },
+          { status: 402 },
+        );
+      }
+    }
+
+    const result = generatePrompt(validation.answers, { depth: caps.briefDepth });
+    const generation = await store.createGeneration({
+      userId: user.id,
+      productName: result.productName,
+      summary: result.summary,
+      answers: validation.answers,
+    });
+
+    return Response.json({ id: generation.id, productName: result.productName }, { status: 201 });
+  } catch (err) {
+    if (isDatabaseError(err)) return databaseFailure(err);
+    throw err;
+  }
 }

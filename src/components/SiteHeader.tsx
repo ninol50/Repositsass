@@ -34,6 +34,12 @@ export async function SiteHeader() {
           {user ? (
             <>
               <Link
+                href="/ideas"
+                className="rounded-lg px-3 py-2 text-[13.5px] text-ink-300 transition-colors hover:text-white"
+              >
+                Idées
+              </Link>
+              <Link
                 href="/dashboard"
                 className="rounded-lg px-3 py-2 text-[13.5px] text-ink-300 transition-colors hover:text-white"
               >

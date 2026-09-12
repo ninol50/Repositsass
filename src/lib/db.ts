@@ -32,6 +32,8 @@ export interface Store {
   getGeneration(id: string): Promise<Generation | null>;
   listGenerations(userId: string, limit?: number): Promise<Generation[]>;
   countGenerations(userId: string): Promise<number>;
+  /** Generations since a date — the monthly quota window. */
+  countGenerationsSince(userId: string, since: Date): Promise<number>;
   createReview(r: Omit<Review, "id" | "createdAt" | "approved">): Promise<Review>;
   listReviews(limit?: number): Promise<Review[]>;
   getReviewByUser(userId: string): Promise<Review | null>;
@@ -148,6 +150,12 @@ class MemoryStore implements Store {
 
   async countGenerations(userId: string) {
     return [...memoryState().generations.values()].filter((g) => g.userId === userId).length;
+  }
+
+  async countGenerationsSince(userId: string, since: Date) {
+    return [...memoryState().generations.values()].filter(
+      (g) => g.userId === userId && new Date(g.createdAt) >= since,
+    ).length;
   }
 
   async createReview(r: Omit<Review, "id" | "createdAt" | "approved">) {
@@ -351,6 +359,14 @@ class PostgresStore implements Store {
   async countGenerations(userId: string) {
     await this.init();
     const rows = await this.sql`SELECT count(*)::int AS n FROM generations WHERE user_id = ${userId}`;
+    return Number(rows[0]?.n ?? 0);
+  }
+
+  async countGenerationsSince(userId: string, since: Date) {
+    await this.init();
+    const rows = await this.sql`
+      SELECT count(*)::int AS n FROM generations
+      WHERE user_id = ${userId} AND created_at >= ${since.toISOString()}`;
     return Number(rows[0]?.n ?? 0);
   }
 

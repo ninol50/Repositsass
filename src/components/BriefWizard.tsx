@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -206,21 +207,37 @@ function ColorField({ value, onChange }: { value: string; onChange: (v: string) 
 
 /* ------------------------------- wizard -------------------------------- */
 
-export function BriefWizard({ signedIn, initialIdea }: { signedIn: boolean; initialIdea?: string }) {
+export function BriefWizard({
+  signedIn,
+  initialIdea,
+  prefill,
+  prefillLabel,
+}: {
+  signedIn: boolean;
+  initialIdea?: string;
+  /** Answers copied from a catalogue entry (Pro). */
+  prefill?: Answers;
+  prefillLabel?: string;
+}) {
   const router = useRouter();
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<Answers>(() => {
-    const base = defaultAnswers();
+    const base = { ...defaultAnswers(), ...(prefill ?? {}) };
     if (initialIdea) base.idea = initialIdea;
     return base;
   });
   const [touched, setTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsUpgrade, setNeedsUpgrade] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   /* Restore a draft (e.g. after being sent to signup mid-flow). */
   useEffect(() => {
+    if (prefill) {
+      setHydrated(true);
+      return;
+    }
     try {
       const raw = sessionStorage.getItem(DRAFT_KEY);
       if (raw) {
@@ -288,10 +305,16 @@ export function BriefWizard({ signedIn, initialIdea }: { signedIn: boolean; init
         return;
       }
 
-      const data = (await res.json().catch(() => ({}))) as { id?: string; error?: string; errors?: Record<string, string> };
+      const data = (await res.json().catch(() => ({}))) as {
+        id?: string;
+        error?: string;
+        errors?: Record<string, string>;
+        upgrade?: boolean;
+      };
 
       if (!res.ok || !data.id) {
         setError(data.error ?? "La génération a échoué. Vérifie tes réponses.");
+        setNeedsUpgrade(Boolean(data.upgrade));
         setSubmitting(false);
         return;
       }
@@ -360,6 +383,15 @@ export function BriefWizard({ signedIn, initialIdea }: { signedIn: boolean; init
         </div>
       </div>
 
+      {prefillLabel && stepIndex === 0 && (
+        <div className="mb-8">
+          <Alert tone="success">
+            Questionnaire pré-rempli depuis <strong>{prefillLabel}</strong>. Ajuste ce que tu veux —
+            couleurs, prix, cible — le reste est déjà posé.
+          </Alert>
+        </div>
+      )}
+
       {/* Step ---------------------------------------------------------- */}
       <div key={step.id} className="animate-rise">
         <h1 className="font-display text-[28px] font-semibold tracking-tight text-white sm:text-[34px]">
@@ -412,7 +444,17 @@ export function BriefWizard({ signedIn, initialIdea }: { signedIn: boolean; init
 
       {error && (
         <div className="mt-8">
-          <Alert tone="error">{error}</Alert>
+          <Alert tone="error">
+            {error}
+            {needsUpgrade && (
+              <>
+                {" "}
+                <Link href="/pricing" className="underline underline-offset-4">
+                  Voir les plans
+                </Link>
+              </>
+            )}
+          </Alert>
         </div>
       )}
 

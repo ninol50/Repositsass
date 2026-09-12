@@ -32,6 +32,8 @@ export type GeneratedPrompt = {
   /** Free teaser: everything before the paywall cut. */
   preview: string;
   wordCount: number;
+  depth: "standard" | "pro";
+  sectionCount: number;
 };
 
 /* ------------------------------------------------------------------ */
@@ -457,7 +459,13 @@ export function slugify(input: string): string {
 /* The generator                                                       */
 /* ------------------------------------------------------------------ */
 
-export function generatePrompt(answers: Answers): GeneratedPrompt {
+export type GenerateOptions = {
+  /** "pro" appends the four deep-dive sections paid plans unlock. */
+  depth?: "standard" | "pro";
+};
+
+export function generatePrompt(answers: Answers, options: GenerateOptions = {}): GeneratedPrompt {
+  const depth = options.depth ?? "standard";
   const idea = str(answers, "idea");
   const problem = str(answers, "problem");
   const audience = str(answers, "audience");
@@ -902,7 +910,125 @@ export function generatePrompt(answers: Answers): GeneratedPrompt {
     "",
     "---",
     "",
-    "## 12. Première action",
+  );
+
+  /* --- Pro deep dives ---------------------------------------------- */
+  let section = 12;
+
+  if (depth === "pro") {
+    p(
+      `## ${section}. Analyse concurrentielle et différenciation`,
+      "",
+      competitor
+        ? `L'alternative nommée est **${competitor}**. Avant d'écrire la moindre ligne de copy, remplis ce tableau avec des faits vérifiables, pas des impressions.`
+        : "Aucune alternative n'a été nommée, ce qui est en soi un signal d'alerte. Commence par en identifier trois : deux outils concurrents et la méthode manuelle que les gens utilisent aujourd'hui.",
+      "",
+      "| | Alternative 1 | Alternative 2 | Ne rien faire |",
+      "| --- | --- | --- | --- |",
+      "| Prix affiché | | | 0 € |",
+      "| Ce qu'ils font mieux | | | rien à installer |",
+      "| Ce qu'ils font mal | | | le problème persiste |",
+      "| Pour qui ils sont surdimensionnés | | | — |",
+      "",
+      "Ensuite, choisis **un seul** axe de différenciation et tiens-le partout :",
+      "",
+      "1. **Plus étroit** — tu fais une seule chose, pour une seule cible, mieux que quiconque.",
+      "2. **Plus rapide** — le même résultat en dix fois moins de temps ou d'étapes.",
+      "3. **Moins cher structurellement** — ton coût marginal est plus bas, pas ta marge.",
+      "4. **Intégré là où ils ne sont pas** — tu vis dans l'outil que la cible utilise déjà.",
+      "",
+      "Un produit qui coche « un peu de tout » ne se retient pas. Écris ton axe en une phrase et relis chaque page de ton site en te demandant si elle le sert.",
+      "",
+      "> Interdit : prétendre être meilleur sur tous les axes. Nomme explicitement ce que tu fais moins bien que les concurrents — c'est ce qui rend le reste crédible.",
+      "",
+      "---",
+      "",
+    );
+    section += 1;
+
+    p(
+      `## ${section}. Plan d'acquisition, 90 premiers jours`,
+      "",
+      `Cible : ${audienceLabel}. Canaux où elle se trouve réellement : ${ctx.where}.`,
+      "",
+      `Il te faut environ **${math.monthlyVisitorsNeeded.toLocaleString("fr-FR")} visiteurs par mois** pour tenir ton objectif. Ne lance pas quatre canaux en même temps : tu n'auras assez de données sur aucun.`,
+      "",
+      "| Phase | Objectif | Ce que tu fais | Comment tu sais que ça marche |",
+      "| --- | --- | --- | --- |",
+      "| Jours 1-30 | 10 conversations | Contact direct, un par un, sans automatisation | 3 personnes disent « je le prendrais aujourd'hui » |",
+      "| Jours 31-60 | 100 visiteurs qualifiés | **Un seul** canal, celui où la cible est la plus dense | 2,5% s'inscrivent |",
+      "| Jours 61-90 | Premiers payants | Optimiser le parcours inscription → valeur | 5% des inscrits paient |",
+      "",
+      `Ton CAC ne doit jamais dépasser **${math.cacCeiling.toLocaleString("fr-FR")} €** (LTV ÷ 3). Si un canal coûte plus, coupe-le, même s'il amène du volume.`,
+      "",
+      "Deux règles qui évitent les mois perdus :",
+      "",
+      "- Un canal ne se juge pas avant 30 jours ni après 60. Avant, c'est du bruit ; après, c'est de l'entêtement.",
+      "- Si les dix premières conversations ne produisent aucun « je paierais pour ça », le problème est le produit, pas l'acquisition. Reviens à la section 1.",
+      "",
+      "---",
+      "",
+    );
+    section += 1;
+
+    p(
+      `## ${section}. Instrumentation : ce qu'il faut mesurer`,
+      "",
+      "Sans ces événements, tu pilotes à l'aveugle et tu optimiseras au hasard. Implémente-les dès la mise en ligne, pas après.",
+      "",
+      "```text",
+      "signup_completed        { source }",
+      "activation_reached      { seconds_since_signup }   ← le moment de valeur défini en section 6",
+      "pricing_viewed          { plan_highlighted }",
+      "checkout_started        { plan }",
+      "payment_confirmed       { plan, amount }",
+      "subscription_cancelled  { plan, days_active }",
+      "```",
+      "",
+      "Les quatre chiffres à regarder chaque semaine, et aucun autre au début :",
+      "",
+      "| Métrique | Calcul | Seuil d'alerte |",
+      "| --- | --- | --- |",
+      "| Taux d'activation | activation / signup | sous 40%, ton onboarding est cassé |",
+      "| Visiteur → inscription | signup / visiteurs | sous 1,5%, ta landing ne convainc pas |",
+      "| Inscription → payant | payment / signup | sous 2%, ton prix ou ta valeur perçue est à revoir |",
+      `| Churn mensuel | annulations / payants | au-dessus de ${math.monthlyChurnPct}%, la rétention passe avant l'acquisition |`,
+      "",
+      "Ne construis pas de dashboard maison avant d'avoir 100 utilisateurs. Un outil externe et une requête SQL suffisent.",
+      "",
+      "---",
+      "",
+    );
+    section += 1;
+
+    p(
+      `## ${section}. Risques d'exécution et points de décision`,
+      "",
+      "Ce qui tue le plus souvent un projet à ce stade, dans l'ordre de probabilité :",
+      "",
+      "1. **Le périmètre gonfle.** Tu ajoutes des fonctionnalités au lieu de parler à des clients. Signal : la v1 n'est toujours pas en ligne après le délai prévu. Réaction : coupe tout sauf la boucle de valeur principale et publie dans la semaine.",
+      "2. **Personne n'active.** Les gens s'inscrivent et ne reviennent jamais. Signal : taux d'activation sous 40%. Réaction : regarde cinq sessions réelles, corrige le point exact où ils décrochent.",
+      "3. **Le prix ne tient pas.** Les gens trouvent l'outil bien mais ne paient pas. Signal : beaucoup d'inscrits, presque aucun payant. Réaction : ce n'est presque jamais « trop cher », c'est « pas assez utile » — remonte à la section 1.",
+      "4. **Tu construis seul trop longtemps.** Signal : plus de trois semaines sans parler à un utilisateur. Réaction : dix conversations cette semaine, avant toute nouvelle ligne de code.",
+      "",
+      "### Points de décision datés",
+      "",
+      "| Quand | Question | Si la réponse est non |",
+      "| --- | --- | --- |",
+      "| Fin du mois 1 | La v1 est-elle en ligne ? | Réduis le périmètre, pas le délai |",
+      "| Fin du mois 3 | As-tu un client payant ? | Le problème est le positionnement, pas le produit |",
+      `| Fin du mois 6 | As-tu ${Math.max(5, Math.round(math.customersNeeded * 0.05))} clients payants ? | Arrête ou change de cible — continuer à l'identique ne changera rien |`,
+      "",
+      "Écris ces dates dans ton agenda maintenant. Un point de décision qu'on repousse n'est pas un point de décision.",
+      "",
+      "---",
+      "",
+    );
+    section += 1;
+  }
+
+  p(
+    `## ${section}. Première action`,
     "",
     `Commence par relire ce brief et liste les trois points qui te semblent les plus risqués ou les plus flous pour ${productName}. Ensuite seulement, attaque l'étape 1.`,
     "",
@@ -924,5 +1050,7 @@ export function generatePrompt(answers: Answers): GeneratedPrompt {
     markdown,
     preview,
     wordCount: markdown.split(/\s+/).length,
+    depth,
+    sectionCount: section + 1,
   };
 }
