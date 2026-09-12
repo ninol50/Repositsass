@@ -1,7 +1,7 @@
 import { setSessionCookie, verifyPassword } from "@/lib/auth";
 import { getStore } from "@/lib/db";
 import { clientKey, rateLimit, tooManyRequests } from "@/lib/rate-limit";
-import { setupBlocker } from "@/lib/setup";
+import { databaseFailure, isDatabaseError, setupBlocker } from "@/lib/setup";
 
 export const runtime = "nodejs";
 
@@ -20,16 +20,21 @@ export async function POST(req: Request) {
     return Response.json({ error: "Email et mot de passe requis." }, { status: 400 });
   }
 
-  const store = getStore();
-  await store.init();
-  const user = await store.getUserByEmail(email);
+  try {
+    const store = getStore();
+    await store.init();
+    const user = await store.getUserByEmail(email);
 
-  // Same message and comparable timing whether the account exists or not.
-  const valid = user ? await verifyPassword(password, user.passwordHash) : false;
-  if (!user || !valid) {
-    return Response.json({ error: "Email ou mot de passe incorrect." }, { status: 401 });
+    // Same message and comparable timing whether the account exists or not.
+    const valid = user ? await verifyPassword(password, user.passwordHash) : false;
+    if (!user || !valid) {
+      return Response.json({ error: "Email ou mot de passe incorrect." }, { status: 401 });
+    }
+
+    await setSessionCookie(user.id);
+    return Response.json({ ok: true });
+  } catch (err) {
+    if (isDatabaseError(err)) return databaseFailure(err);
+    throw err;
   }
-
-  await setSessionCookie(user.id);
-  return Response.json({ ok: true });
 }
