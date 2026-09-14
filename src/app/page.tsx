@@ -94,12 +94,11 @@ export default function HomePage() {
           <div className="mx-auto flex w-full max-w-6xl flex-col items-center px-5 pb-20 pt-16 text-center sm:pt-24">
             <Badge className="animate-rise">
               <span className="h-1.5 w-1.5 rounded-full bg-mint-400" />
-              Questionnaire guidé, brief exécutable
+              Le nouveau Shopify des sites web
             </Badge>
 
-            <h1 className="animate-rise mt-6 max-w-4xl font-display text-[36px] font-semibold leading-[1.08] tracking-[-0.03em] text-white sm:text-[58px]">
-              Ton idée de SaaS,{" "}
-              <span className="text-gradient">transformée en brief</span> que Claude Code peut exécuter.
+            <h1 className="animate-rise mt-6 max-w-4xl font-display text-[44px] font-semibold leading-[1.05] tracking-[-0.035em] text-white sm:text-[68px]">
+              Fais ton SaaS <span className="text-gradient">en 1 clic</span>
             </h1>
 
             <p className="animate-rise mt-6 max-w-2xl text-[16px] leading-relaxed text-ink-400 sm:text-[18px]">
