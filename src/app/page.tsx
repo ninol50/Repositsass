@@ -258,7 +258,7 @@ export default function HomePage() {
             </p>
             <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <ButtonLink href="/brief" variant="brand" size="lg">
-                Générer mon brief
+                Générer mon site
               </ButtonLink>
               <ButtonLink href="/pricing" variant="outline" size="lg">
                 Voir les tarifs

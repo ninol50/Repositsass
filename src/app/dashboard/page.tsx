@@ -135,7 +135,7 @@ export default async function DashboardPage() {
                 un brief.
               </p>
               <ButtonLink href="/brief" variant="brand" className="mt-7">
-                Générer mon premier brief
+                Générer mon premier site
               </ButtonLink>
             </div>
           ) : (

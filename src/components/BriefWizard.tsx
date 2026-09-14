@@ -488,7 +488,7 @@ export function BriefWizard({
           disabled={submitting}
           className="h-12 rounded-xl bg-[linear-gradient(120deg,#8f6fff,#6a45f5)] px-7 text-[14.5px] font-medium text-white transition-all hover:brightness-110 active:scale-[0.985] disabled:opacity-50"
         >
-          {submitting ? "Génération..." : isLast ? "Générer mon brief" : "Continuer"}
+          {submitting ? "Génération..." : isLast ? "Générer mon site" : "Continuer"}
         </button>
       </div>
     </div>

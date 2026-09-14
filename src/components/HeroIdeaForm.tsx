@@ -47,7 +47,7 @@ export function HeroIdeaForm() {
           disabled={idea.trim().length < 10 || pending}
           className="h-12 shrink-0 rounded-xl bg-[linear-gradient(120deg,#8f6fff,#6a45f5)] px-6 text-[14.5px] font-medium text-white transition-all hover:brightness-110 active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {pending ? "Ouverture..." : "Générer mon brief"}
+          {pending ? "Ouverture..." : "Générer mon site"}
         </button>
       </form>
 

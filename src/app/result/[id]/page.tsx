@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { PromptActions } from "@/components/PromptActions";
+import { ResultStages } from "@/components/ResultStages";
+import { SitePreview } from "@/components/SitePreview";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Badge, ButtonLink } from "@/components/ui";
@@ -10,12 +12,13 @@ import { getStore } from "@/lib/db";
 import { renderMarkdown } from "@/lib/markdown";
 import { capabilitiesFor } from "@/lib/plans";
 import { generatePrompt } from "@/lib/prompt-engine";
+import { buildSitePreview, redactModel, type SitePreviewModel } from "@/lib/site-preview";
 import { hasActivePlan } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Ton brief",
+  title: "Ton site",
   robots: { index: false, follow: false },
 };
 
@@ -59,6 +62,11 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
   // promise a document they will not receive.
   const basic = caps.canReadBrief ? result : generatePrompt(generation.answers, { depth: "standard" });
   const pro = caps.canReadBrief ? result : generatePrompt(generation.answers, { depth: "pro" });
+  const fullPreview = buildSitePreview(generation.answers);
+  // Redact BEFORE the model reaches any component: React serialises the props of
+  // a server element passed to a client component into the RSC payload, so a
+  // component that merely declines to print a string would still ship it.
+  const preview = caps.canReadBrief ? fullPreview : redactModel(fullPreview);
 
   return (
     <>
@@ -99,42 +107,150 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
           </dl>
         </header>
 
-        {caps.canReadBrief ? (
-          <>
-            <div className="mt-8">
-              <PromptActions
-                markdown={result.markdown}
-                fileName={`brief-${result.productName.toLowerCase()}.md`}
-              />
-            </div>
+        <ResultStages
+          continueLabel="Continuer"
+          continueHint={
+            caps.canReadBrief
+              ? "Génère le prompt à coller dans Claude Code"
+              : "Voir ce que contient le prompt à coller dans Claude Code"
+          }
+          preview={
+            <SitePreviewStage
+              model={preview}
+              unlocked={caps.canReadBrief}
+              styleLabel={preview.style.label}
+            />
+          }
+          prompt={
+            caps.canReadBrief ? (
+              <>
+                <div className="mt-6">
+                  <PromptActions
+                    markdown={result.markdown}
+                    fileName={`brief-${result.productName.toLowerCase()}.md`}
+                  />
+                </div>
 
-            {caps.briefDepth === "pro" && (
-              <p className="mt-4 text-[13px] text-mint-400">
-                Version Pro : {result.sectionCount} sections, dont analyse concurrentielle, plan
-                d&apos;acquisition, instrumentation et risques d&apos;exécution.
-              </p>
-            )}
+                <p className="mt-4 text-[13px] text-ink-400">
+                  {caps.briefDepth === "pro" ? (
+                    <span className="text-mint-400">
+                      Version Pro : {result.sectionCount} sections, dont analyse concurrentielle, plan
+                      d&apos;acquisition, instrumentation et risques d&apos;exécution.
+                    </span>
+                  ) : (
+                    <>
+                      {result.sectionCount} sections. La dernière fait dire à Claude Code, avant de
+                      coder, tout ce qu&apos;il reste à connecter — base, paiement, Vercel, domaine.
+                    </>
+                  )}
+                </p>
 
-            <article className="surface mt-8 px-5 py-7 sm:px-9 sm:py-10">
-              <div
-                className="prompt-doc"
-                dangerouslySetInnerHTML={{ __html: renderMarkdown(result.markdown) }}
+                <article className="surface mt-6 px-5 py-7 sm:px-9 sm:py-10">
+                  <div
+                    className="prompt-doc"
+                    dangerouslySetInnerHTML={{ __html: renderMarkdown(result.markdown) }}
+                  />
+                </article>
+              </>
+            ) : (
+              <LockedBrief
+                productName={result.productName}
+                words={basic.wordCount}
+                sections={basic.sectionCount}
+                proWords={pro.wordCount}
+                proSections={pro.sectionCount}
               />
-            </article>
-          </>
-        ) : (
-          <LockedBrief
-            productName={result.productName}
-            words={basic.wordCount}
-            sections={basic.sectionCount}
-            proWords={pro.wordCount}
-            proSections={pro.sectionCount}
-          />
-        )}
+            )
+          }
+        />
       </main>
 
       <SiteFooter />
     </>
+  );
+}
+
+/**
+ * Step 1: the site itself.
+ *
+ * Locked accounts get the same layout, the same colour and the same typography,
+ * but every generated string is replaced by a skeleton bar before the HTML is
+ * sent — the blur on top is the visual cue, not the protection.
+ */
+function SitePreviewStage({
+  model,
+  unlocked,
+  styleLabel,
+}: {
+  model: SitePreviewModel;
+  unlocked: boolean;
+  styleLabel: string;
+}) {
+  return (
+    <section className="mt-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="font-display text-[20px] font-semibold tracking-tight text-white">
+            Ton site
+          </h2>
+          <p className="mt-1.5 text-[13.5px] text-ink-400">
+            {unlocked
+              ? `Style ${styleLabel} · ${model.mode === "dark" ? "ambiance sombre" : "ambiance claire"} · palette dérivée de ${model.palette.primary}.`
+              : "Voilà la forme, les couleurs et la structure. Le contenu s'affiche avec un plan actif."}
+          </p>
+        </div>
+        <span className="inline-flex items-center gap-2 rounded-full border border-white/[0.09] px-3 py-1.5 text-[12px] text-ink-400">
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: model.palette.primary }} />
+          {model.palette.primary} · contraste {model.palette.contrastOnPrimary}:1
+        </span>
+      </div>
+
+      <div className="relative mt-5">
+        {/* Locked: the mockup is capped so the padlock lands inside the first screen. */}
+        <div
+          className={unlocked ? "" : "pointer-events-none max-h-[560px] select-none overflow-hidden rounded-2xl blur-[7px]"}
+          aria-hidden={!unlocked}
+        >
+          <SitePreview model={model} redacted={!unlocked} />
+        </div>
+
+        {!unlocked && (
+          <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-ink-950/45 px-5">
+            <div className="surface max-w-sm p-6 text-center">
+              <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-brand-500/30 bg-brand-500/[0.12] text-brand-200">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+              </span>
+              <h3 className="mt-5 font-display text-[19px] font-semibold text-white">
+                Ton site est généré
+              </h3>
+              <p className="mt-2.5 text-[13.5px] leading-relaxed text-ink-400">
+                La maquette existe, avec ta couleur et ton style. Il faut un plan actif pour la voir
+                en clair et récupérer le prompt qui la construit.
+              </p>
+              <div className="mt-6 flex flex-col gap-2.5">
+                <ButtonLink href="/pricing" variant="brand">
+                  Débloquer mon site
+                </ButtonLink>
+                <ButtonLink href="/billing/verify" variant="ghost" size="sm">
+                  J&apos;ai déjà payé
+                </ButtonLink>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {unlocked && (
+        <p className="mt-4 text-[12.5px] leading-relaxed text-ink-500">
+          Ce n&apos;est pas une capture d&apos;un produit fini : c&apos;est la maquette que décrit ton
+          prompt. Les emplacements de chiffres restent vides — tant qu&apos;il n&apos;y a pas de vraie
+          donnée, en inventer une est le plus sûr moyen de perdre la confiance d&apos;un premier client.
+        </p>
+      )}
+    </section>
   );
 }
 

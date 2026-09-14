@@ -7,7 +7,7 @@
  */
 
 import { buildPalette, normalizeHex, type Palette } from "./color";
-import { labelOf, list, str, type Answers } from "./questions";
+import { labelOf, str, type Answers } from "./questions";
 
 export type BusinessMath = {
   mrrTarget: number;
@@ -279,6 +279,84 @@ const FEATURE_SPEC: Record<string, { label: string; work: string; tables: string
   },
 };
 
+/**
+ * The v1 feature set is DERIVED, not asked.
+ *
+ * Asking someone to pick five features before they have a single user is how a
+ * one-week project becomes a six-month one: the list is always a wish list, and
+ * nothing in the questionnaire stopped a "1 semaine" timeline from carrying five
+ * features. So the scope now falls out of the answers that actually constrain it
+ * — who buys, how they pay, and how long there is — and the budget is capped by
+ * the timeline the user chose.
+ *
+ * Same input, same output: this stays as deterministic as the rest of the engine.
+ */
+export function deriveFeatures(answers: Answers): string[] {
+  const audience = str(answers, "audience");
+  const timeline = str(answers, "timeline") || "1m";
+  const pricingModel = str(answers, "pricingModel");
+  const payments = str(answers, "payments") || "stripe";
+  const auth = str(answers, "auth") || "email-password";
+  const language = str(answers, "language");
+
+  const budget = timeline === "1w" ? 1 : timeline === "3m" ? 5 : 3;
+
+  // Ordered by how much each one moves the needle for THIS profile. The first
+  // entry is the core surface every SaaS needs; the rest earn their place.
+  const ranked: string[] = ["dashboard"];
+  const push = (id: string) => {
+    if (!ranked.includes(id)) ranked.push(id);
+  };
+
+  switch (audience) {
+    case "developers":
+      push("api");
+      push("analytics");
+      break;
+    case "ecommerce":
+      push("integrations");
+      push("analytics");
+      break;
+    case "b2b-enterprise":
+      push("teams");
+      push("admin");
+      push("export");
+      break;
+    case "b2b-smb":
+      push("onboarding");
+      push("integrations");
+      break;
+    case "freelances":
+      push("onboarding");
+      push("export");
+      break;
+    case "creators":
+    case "b2c":
+      push("onboarding");
+      push("notifications");
+      break;
+    default:
+      push("onboarding");
+  }
+
+  // Freemium and usage-based pricing are unpilotable without a funnel.
+  if (pricingModel === "freemium" || pricingModel === "usage") push("analytics");
+  // A password login without a reset email is a support ticket waiting to happen.
+  if (auth === "email-password") push("emails");
+  if (payments !== "none") push("admin");
+  if (language === "both") push("i18n");
+
+  for (const fallback of ["onboarding", "emails", "analytics", "export", "admin"]) {
+    push(fallback);
+  }
+
+  return ranked.slice(0, budget);
+}
+
+export function featureLabel(id: string): string {
+  return FEATURE_SPEC[id]?.label ?? id;
+}
+
 const TONE_SPEC: Record<string, string> = {
   direct:
     "Phrases courtes. Verbes d'action. Zéro jargon marketing. On dit ce que le produit fait, pas ce qu'il représente.",
@@ -434,7 +512,7 @@ function titleCase(w: string): string {
   return w.charAt(0).toUpperCase() + w.slice(1);
 }
 
-function buildName(idea: string): string {
+export function buildName(idea: string): string {
   const ks = keywords(idea, 2);
   if (ks.length === 0) return "Nova";
   const suffixes = ["ly", "flow", "kit", "base", "loop", "deck"];
@@ -458,6 +536,191 @@ export function slugify(input: string): string {
 /* ------------------------------------------------------------------ */
 /* The generator                                                       */
 /* ------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------ */
+/* Connection checklist                                                */
+/* ------------------------------------------------------------------ */
+
+export type ConnectionItem = {
+  service: string;
+  why: string;
+  env: string[];
+  where: string;
+};
+
+/**
+ * Everything the generated project will need an account or a key for.
+ *
+ * This is the list the user is told to expect BEFORE any code is written:
+ * a project that builds locally and dies on deploy because nobody created the
+ * database is the single most common way this goes wrong. Only services implied
+ * by the answers are listed — no upsell, no "nice to have".
+ */
+export function connectionChecklist(answers: Answers): ConnectionItem[] {
+  const skill = str(answers, "skill") || "intermediate";
+  let stack = str(answers, "stack") || "next-postgres";
+  if (stack === "auto") stack = skill === "beginner" ? "next-supabase" : "next-postgres";
+  const auth = str(answers, "auth") || "email-password";
+  const payments = str(answers, "payments") || "stripe";
+  const ai = str(answers, "ai") || "none";
+  const features = deriveFeatures(answers);
+
+  const items: ConnectionItem[] = [
+    {
+      service: "GitHub",
+      why: "Héberger le code et déclencher les déploiements automatiques.",
+      env: [],
+      where: "github.com/new — dépôt privé, puis `git remote add origin` et premier push.",
+    },
+    {
+      service: "Vercel",
+      why: "Héberger le site et exécuter les fonctions serveur.",
+      env: ["NEXT_PUBLIC_SITE_URL"],
+      where:
+        "vercel.com/new — importer le dépôt GitHub. Chaque variable ci-dessous se met dans Settings → Environment Variables, puis il faut redéployer : une variable ajoutée ne s'applique pas au déploiement déjà en ligne.",
+    },
+  ];
+
+  if (stack === "next-supabase") {
+    items.push({
+      service: "Supabase",
+      why: "Base de données Postgres, authentification et stockage.",
+      env: ["DATABASE_URL", "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"],
+      where:
+        "supabase.com → nouveau projet → Settings → Database → Connection string → **Transaction pooler (port 6543)**. La chaîne « Direct connection » en 5432 est en IPv6 et ne se connecte pas depuis Vercel. La clé `service_role` reste côté serveur : jamais dans une variable `NEXT_PUBLIC_`.",
+    });
+  } else if (stack === "laravel") {
+    items.push({
+      service: "Base Postgres managée",
+      why: "Stocker les données de l'application.",
+      env: ["DB_CONNECTION", "DB_HOST", "DB_PORT", "DB_DATABASE", "DB_USERNAME", "DB_PASSWORD", "APP_KEY"],
+      where: "Neon, Railway ou Scalingo. `php artisan key:generate` pour APP_KEY.",
+    });
+  } else if (stack === "django") {
+    items.push({
+      service: "Base Postgres managée",
+      why: "Stocker les données de l'application.",
+      env: ["DATABASE_URL", "SECRET_KEY", "ALLOWED_HOSTS"],
+      where: "Neon ou Railway. SECRET_KEY généré, jamais celui du template de départ.",
+    });
+  } else {
+    items.push({
+      service: "Postgres managé (Neon ou Vercel Postgres)",
+      why: "Stocker les données de l'application.",
+      env: ["DATABASE_URL"],
+      where:
+        "neon.tech ou l'onglet Storage du projet Vercel. Prendre la chaîne « pooled ». Sur Vercel Postgres, l'intégration renseigne la variable automatiquement.",
+    });
+  }
+
+  items.push({
+    service: "Secret de session",
+    why: "Signer les sessions. Sans lui, n'importe qui peut forger un cookie de connexion.",
+    env: ["AUTH_SECRET"],
+    where: "`openssl rand -base64 48` en local, puis copier la valeur dans Vercel. Une valeur différente par environnement.",
+  });
+
+  if (auth === "oauth") {
+    items.push({
+      service: "Google Cloud et/ou GitHub OAuth",
+      why: "Connexion par compte Google ou GitHub.",
+      env: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"],
+      where:
+        "console.cloud.google.com → Credentials → OAuth client, et github.com/settings/developers. L'URL de rappel doit être déclarée deux fois : une pour localhost, une pour le domaine de production.",
+    });
+  } else if (auth === "managed") {
+    items.push({
+      service: "Fournisseur d'authentification géré",
+      why: "Déléguer inscription, connexion et réinitialisation de mot de passe.",
+      env: ["AUTH_PROVIDER_PUBLIC_KEY", "AUTH_PROVIDER_SECRET_KEY"],
+      where:
+        "Clerk, Auth0 ou Supabase Auth selon ce qui est choisi. Prendre les noms exacts de variables dans la documentation du fournisseur retenu, pas ceux ci-dessus.",
+    });
+  }
+
+  if (payments === "stripe") {
+    items.push({
+      service: "Stripe",
+      why: "Encaisser les paiements et recevoir les changements d'abonnement.",
+      env: ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "NEXT_PUBLIC_STRIPE_PRICE_ID"],
+      where:
+        "dashboard.stripe.com → Developers → API keys, puis Webhooks → endpoint `/api/webhooks/stripe`. Le secret de webhook du mode test est différent de celui du mode live.",
+    });
+  } else if (payments === "whop") {
+    items.push({
+      service: "Whop",
+      why: "Encaisser les paiements et débloquer l'accès.",
+      env: ["WHOP_WEBHOOK_SECRET", "WHOP_API_KEY"],
+      where:
+        "Tableau de bord Whop → Developer → Webhooks, pointé sur `/api/webhooks/whop`. Les identifiants de plan sont publics, ils figurent dans l'URL de checkout.",
+    });
+  } else if (payments === "lemonsqueezy" || payments === "paddle") {
+    items.push({
+      service: labelOf("payments", payments),
+      why: "Encaisser les paiements. Merchant of record : la TVA est gérée par le prestataire.",
+      env: ["PAYMENTS_API_KEY", "PAYMENTS_WEBHOOK_SECRET", "PAYMENTS_STORE_ID"],
+      where:
+        "Le compte doit être validé par le prestataire avant de pouvoir vendre — compter quelques jours. Prendre les noms exacts de variables dans sa documentation.",
+    });
+  }
+
+  if (features.includes("emails")) {
+    items.push({
+      service: "Envoi d'emails (Resend ou Postmark)",
+      why: "Emails transactionnels : bienvenue, réinitialisation, confirmation de paiement.",
+      env: ["RESEND_API_KEY", "EMAIL_FROM"],
+      where:
+        "resend.com → API Keys, puis Domains : il faut ajouter les enregistrements DNS et attendre la vérification. Tant que le domaine n'est pas vérifié, l'envoi ne part que vers sa propre adresse.",
+    });
+  }
+
+  if (features.includes("analytics")) {
+    items.push({
+      service: "PostHog",
+      why: "Mesurer l'activation, le passage payant et la résiliation.",
+      env: ["NEXT_PUBLIC_POSTHOG_KEY", "NEXT_PUBLIC_POSTHOG_HOST"],
+      where: "posthog.com → Project settings. La clé projet est publique par conception.",
+    });
+  }
+
+  if (ai === "claude") {
+    items.push({
+      service: "API Anthropic",
+      why: "Faire tourner la fonctionnalité IA du produit.",
+      env: ["ANTHROPIC_API_KEY"],
+      where:
+        "console.anthropic.com → API keys. Attention : c'est un coût variable par utilisateur — poser une limite par compte avant l'ouverture publique.",
+    });
+  } else if (ai === "openai") {
+    items.push({
+      service: "API OpenAI",
+      why: "Faire tourner la fonctionnalité IA du produit.",
+      env: ["OPENAI_API_KEY"],
+      where:
+        "platform.openai.com → API keys. Coût variable par utilisateur : poser une limite par compte avant l'ouverture publique.",
+    });
+  }
+
+  if (features.includes("integrations")) {
+    items.push({
+      service: "Application OAuth de l'outil intégré",
+      why: "Connecter le compte de l'utilisateur à l'outil qu'il utilise déjà.",
+      env: ["INTEGRATION_CLIENT_ID", "INTEGRATION_CLIENT_SECRET"],
+      where:
+        "Espace développeur de l'outil visé. Certaines plateformes exigent une revue avant d'autoriser les comptes tiers : vérifier ce délai avant de le promettre à un client.",
+    });
+  }
+
+  items.push({
+    service: "Nom de domaine",
+    why: "Une URL `.vercel.app` suffit pour tester, pas pour vendre.",
+    env: [],
+    where:
+      "Vercel → Settings → Domains, puis pointer les DNS chez le registrar. Propagation : de quelques minutes à quelques heures.",
+  });
+
+  return items;
+}
 
 export type GenerateOptions = {
   /** "pro" appends the four deep-dive sections paid plans unlock. */
@@ -483,8 +746,6 @@ export function generatePrompt(answers: Answers, options: GenerateOptions = {}):
   const payments = str(answers, "payments") || "stripe";
   const language = str(answers, "language") || "fr";
   const tone = str(answers, "tone") || "direct";
-  const features = list(answers, "features");
-
   let stack = str(answers, "stack") || "next-postgres";
   if (stack === "auto") stack = skill === "beginner" ? "next-supabase" : "next-postgres";
 
@@ -497,7 +758,8 @@ export function generatePrompt(answers: Answers, options: GenerateOptions = {}):
   const tl = TIMELINE_SPEC[timeline] ?? TIMELINE_SPEC["1m"];
   const img = IMAGE_STYLE_SPEC[imageStyle] ?? IMAGE_STYLE_SPEC.abstract;
 
-  const selectedFeatures = features.length > 0 ? features : ["dashboard"];
+  const selectedFeatures = deriveFeatures(answers);
+  const connections = connectionChecklist(answers);
   const featureTables = selectedFeatures.flatMap((f) => FEATURE_SPEC[f]?.tables ?? []);
   const backlog = Object.keys(FEATURE_SPEC).filter((f) => !selectedFeatures.includes(f));
 
@@ -575,6 +837,8 @@ export function generatePrompt(answers: Answers, options: GenerateOptions = {}):
     "## 2. Périmètre de la v1",
     "",
     `Délai visé : **${tl.label}**. ${tl.rule}`,
+    "",
+    `Ce périmètre est déduit de la cible (${audienceLabel}), du modèle de revenus et du délai. Il tient dans le délai annoncé — c'est sa seule raison d'être aussi court.`,
     "",
     "### Dans le périmètre",
     "",
@@ -1028,9 +1292,41 @@ export function generatePrompt(answers: Answers, options: GenerateOptions = {}):
   }
 
   p(
-    `## ${section}. Première action`,
+    `## ${section}. Première action : la liste des branchements`,
     "",
-    `Commence par relire ce brief et liste les trois points qui te semblent les plus risqués ou les plus flous pour ${productName}. Ensuite seulement, attaque l'étape 1.`,
+    "**Avant d'écrire la moindre ligne de code**, produis ta réponse dans cet ordre, et arrête-toi à la fin du point 3.",
+    "",
+    "### 1. Ce qui reste à connecter",
+    "",
+    `Affiche exactement ce tableau, en gardant les noms de variables tels quels. C'est la liste des comptes à créer et des clés à récupérer pour que ${productName} tourne vraiment en ligne, pas seulement sur la machine.`,
+    "",
+    "| Service | Pourquoi | Variables d'environnement | Où le faire |",
+    "| --- | --- | --- | --- |",
+  );
+
+  for (const item of connections) {
+    // Space-joined, not <br>: the on-site renderer escapes HTML before parsing.
+    const env = item.env.length > 0 ? item.env.map((e) => `\`${e}\``).join(" ") : "—";
+    p(`| **${item.service}** | ${item.why} | ${env} | ${item.where} |`);
+  }
+
+  p(
+    "",
+    `Puis résume en une phrase : « Il reste ${connections.length} services à connecter, dont ${connections.filter((c) => c.env.length > 0).length} qui demandent une clé. »`,
+    "",
+    "### 2. Ce que tu peux construire sans rien attendre",
+    "",
+    "Dis clairement ce qui avance dès maintenant sans aucune clé : structure du projet, design system, pages statiques, composants, schéma de base de données, formulaires en local. Et dis ce qui est bloqué tant que les clés manquent : déploiement réel, paiement, emails, IA.",
+    "",
+    "### 3. Les trois risques",
+    "",
+    `Relis ce brief et nomme les trois points les plus risqués ou les plus flous pour ${productName}. Sois précis : « le prix de ${math.arpu} € par mois n'est validé par personne » vaut mieux que « attention au marché ».`,
+    "",
+    "### Ensuite",
+    "",
+    "Demande : « Je commence par la partie qui ne dépend d'aucune clé, ou tu crées d'abord les comptes ? » Puis attends la réponse.",
+    "",
+    "Pendant toute la construction : crée un fichier `BRANCHEMENTS.md` à la racine avec ce tableau, et coche chaque ligne au fur et à mesure. À chaque fois qu'une clé manquante t'empêche d'avancer, écris-le dans ce fichier au lieu de mettre une valeur bidon dans le code.",
     "",
   );
 

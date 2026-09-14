@@ -287,30 +287,9 @@ export const STEPS: Step[] = [
   {
     id: "scope",
     title: "Périmètre",
-    subtitle: "Le piège classique : trop de fonctionnalités. Cinq maximum.",
+    subtitle:
+      "Trois derniers réglages. Le périmètre fonctionnel, lui, est déduit de ta cible et de ton délai : c'est justement là que les projets s'enlisent.",
     fields: [
-      {
-        id: "features",
-        label: "Fonctionnalités prioritaires",
-        help: "Cinq maximum. Tout ce qui n'est pas coché part dans un backlog v2 documenté.",
-        type: "multi",
-        required: true,
-        maxSelected: 5,
-        options: [
-          { value: "dashboard", label: "Dashboard" },
-          { value: "onboarding", label: "Onboarding guidé" },
-          { value: "analytics", label: "Analytics produit" },
-          { value: "emails", label: "Emails transactionnels" },
-          { value: "teams", label: "Équipes / multi-tenant" },
-          { value: "api", label: "API publique" },
-          { value: "export", label: "Export des données" },
-          { value: "admin", label: "Back-office admin" },
-          { value: "referral", label: "Parrainage" },
-          { value: "i18n", label: "Multi-langue" },
-          { value: "integrations", label: "Intégrations tierces" },
-          { value: "notifications", label: "Notifications in-app" },
-        ],
-      },
       {
         id: "language",
         label: "Langue du produit",

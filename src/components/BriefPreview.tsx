@@ -26,7 +26,6 @@ const SAMPLE: Answers = {
   payments: "stripe",
   skill: "intermediate",
   ai: "claude",
-  features: ["dashboard", "onboarding", "integrations"],
   language: "fr",
   tone: "direct",
 };

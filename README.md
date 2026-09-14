@@ -1,8 +1,8 @@
 # RepositSaaS
 
-Générateur de briefs de construction pour SaaS. L'utilisateur décrit son idée, répond à
-un questionnaire de 21 questions, et récupère un document Markdown structuré en 12 sections
-prêt à être collé dans Claude Code.
+Générateur de sites SaaS. L'utilisateur décrit son idée, répond à un questionnaire de
+20 questions, voit une maquette de son site, puis récupère le prompt Markdown à coller
+dans Claude Code pour le construire.
 
 Next.js 15 (App Router) · TypeScript · Tailwind CSS v4 · Postgres · Whop.
 
@@ -20,7 +20,24 @@ de churn et de LTV, sélection d'architecture). Conséquences directes :
 - les idées des utilisateurs ne sont envoyées à aucun fournisseur tiers.
 
 Le brief n'est pas stocké : seules les réponses le sont, et le document est régénéré
-à l'affichage — à la profondeur que le plan de l'utilisateur autorise.
+à l'affichage — à la profondeur que le plan de l'utilisateur autorise. La maquette
+(`src/lib/site-preview.ts`) sort du même jeu de réponses et des mêmes règles de palette.
+
+### Le périmètre fonctionnel est déduit, pas demandé
+
+Le questionnaire ne demande plus de cocher cinq fonctionnalités. `deriveFeatures()`
+les déduit de la cible, du modèle de revenus, du mode d'authentification et du délai,
+puis **plafonne la liste par le délai choisi** : une par semaine, trois pour un mois,
+cinq pour trois mois. L'ancien formulaire laissait cocher cinq fonctionnalités avec un
+délai d'une semaine, ce que le brief lui-même déclarait ensuite impossible.
+
+### Ce que le prompt fait faire à Claude Code en premier
+
+La dernière section du document impose un ordre : avant toute ligne de code, Claude Code
+doit afficher le tableau des services à connecter (GitHub, Vercel, base, paiement, emails,
+IA, domaine) avec les noms exacts des variables d'environnement, dire ce qui avance sans
+aucune clé, nommer les trois risques du projet, puis s'arrêter et attendre. Le tableau est
+recopié dans un `BRANCHEMENTS.md` tenu à jour pendant toute la construction.
 
 ## Ce que chaque plan débloque
 
@@ -36,10 +53,17 @@ et la page tarifs lisent tous ce fichier.
 | Guide complet (`/guide`) | non | non | oui | oui |
 | Pré-remplissage | non | non | oui | oui |
 
-Le compte gratuit peut générer : il voit le titre, la longueur exacte et la liste des
-sections de son brief, mais **aucune ligne de contenu n'est envoyée au navigateur** —
-le branchement a lieu côté serveur, le markdown n'est jamais sérialisé dans cette
-branche.
+Le compte gratuit peut générer : il voit la forme de sa maquette, le titre, la longueur
+exacte et la liste des sections de son brief, mais **aucune ligne de contenu n'est envoyée
+au navigateur** — le branchement a lieu côté serveur, le markdown n'est jamais sérialisé
+dans cette branche.
+
+La maquette verrouillée n'est pas un flou CSS posé sur du vrai texte : `redactModel()`
+remplace chaque chaîne générée par une barre de la même longueur **avant** que le modèle
+n'atteigne le moindre composant. C'est nécessaire, pas décoratif : React sérialise les
+props d'un composant serveur passé à un composant client dans la charge utile RSC, donc
+un composant qui se contenterait de ne pas afficher la chaîne l'enverrait quand même.
+Le flou par-dessus n'est que le signal visuel.
 
 Les quatre sections Pro (analyse concurrentielle, plan d'acquisition 90 jours,
 instrumentation, risques d'exécution) ajoutent environ 48% de contenu au document.
@@ -141,7 +165,7 @@ src/
 ├── app/
 │   ├── page.tsx                 landing
 │   ├── brief/                   questionnaire
-│   ├── result/[id]/             brief généré + paywall
+│   ├── result/[id]/             maquette du site, puis prompt + paywall
 │   ├── pricing/  faq/  legal/   pages publiques
 │   ├── dashboard/               espace connecté
 │   ├── admin/                   back-office : liste des inscrits
@@ -151,7 +175,8 @@ src/
 │   └── api/                     auth, generate, reviews, billing, webhooks, health
 ├── components/                  UI (serveur + client)
 ├── lib/
-│   ├── prompt-engine.ts         le moteur : questions → brief
+│   ├── prompt-engine.ts         le moteur : questions → brief, périmètre, branchements
+│   ├── site-preview.ts          le moteur visuel : questions → maquette (+ redactModel)
 │   ├── questions.ts             schéma du questionnaire + validation serveur
 │   ├── color.ts                 dérivation de palette, contraste WCAG
 │   ├── markdown.ts              rendu Markdown (échappement avant transformation)
