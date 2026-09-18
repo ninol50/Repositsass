@@ -24,6 +24,12 @@ export type PlanConfig = {
   period: string;
   tagline: string;
   features: string[];
+  /**
+   * Headline features, shown above the list, emphasised and blurred behind a
+   * lock. The blur is a teaser, not a paywall: this is marketing copy, and it
+   * is readable in the page source like any other text on the page.
+   */
+  highlights?: string[];
   highlight?: boolean;
   checkoutUrl: string | null;
   whopPlanId: string | null;
@@ -87,6 +93,10 @@ export function planCatalog(): PlanConfig[] {
       period: "par mois",
       tagline: "Pour ceux qui lancent plusieurs produits.",
       highlight: true,
+      highlights: [
+        "Guide complet : comment créer son SaaS de A à Z",
+        "Les meilleures idées qui marchent déjà, prêtes à copier",
+      ],
       features: [
         "30 briefs par mois — 3× le plan Basic",
         "Brief approfondi : 16 sections au lieu de 12",

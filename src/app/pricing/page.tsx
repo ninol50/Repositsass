@@ -128,6 +128,33 @@ export default async function PricingPage() {
                   <span className="text-[13px] text-ink-500">{p.period}</span>
                 </p>
 
+                {p.highlights && p.highlights.length > 0 && (
+                  <ul className="mt-7 space-y-2.5">
+                    {p.highlights.map((h) => (
+                      <li
+                        key={h}
+                        className="flex items-center gap-3 rounded-xl border border-brand-500/30 bg-brand-500/[0.09] px-3.5 py-3"
+                      >
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-500/20 text-brand-200">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                          </svg>
+                        </span>
+                        {/* Blurred on purpose: a teaser, not a paywall — the
+                            text ships in the HTML like the rest of the page. */}
+                        <span
+                          className="select-none font-display text-[14px] font-semibold leading-snug text-white blur-[3.5px]"
+                          aria-hidden
+                        >
+                          {h}
+                        </span>
+                        <span className="sr-only">{h} — débloqué avec le plan Pro</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
                 <ul className="mt-7 flex-1 space-y-3">
                   {p.features.map((f) => (
                     <li key={f} className="flex gap-2.5 text-[13.5px] leading-snug text-ink-300">
