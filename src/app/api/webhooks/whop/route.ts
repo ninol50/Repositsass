@@ -1,10 +1,10 @@
+import { grantFromMembership, rememberBillingEmail } from "@/lib/billing";
 import { getStore } from "@/lib/db";
-import type { Plan } from "@/lib/types";
 import {
   GRANTING_EVENTS,
   REVOKING_EVENTS,
-  planFromWhopPlanId,
   verifyWebhookSignature,
+  type WhopMembership,
   type WhopWebhookEvent,
 } from "@/lib/whop";
 
@@ -57,7 +57,9 @@ export async function POST(req: Request) {
   const email = data.user?.email ?? data.email ?? null;
 
   let user = metaUserId ? await store.getUserById(metaUserId) : null;
-  if (!user && email) user = await store.getUserByEmail(email);
+  // Matches the billing address too, so a customer who paid from another
+  // address is found on the second payment as well as on the first.
+  if (!user && email) user = await store.findUserByAnyEmail(email);
 
   if (!user) {
     // Acknowledge so Whop stops retrying; the customer can still use the
@@ -67,12 +69,34 @@ export async function POST(req: Request) {
   }
 
   if (GRANTING_EVENTS.has(action)) {
-    const plan: Plan = planFromWhopPlanId(data.plan_id);
     const expiresAt =
       typeof data.renewal_period_end === "number"
         ? new Date(data.renewal_period_end * 1000).toISOString()
         : null;
-    await store.setPlan(user.id, plan, `whop:${action}`, expiresAt, membershipId);
+
+    const membership: WhopMembership = {
+      id: membershipId ?? `${action}:${user.id}`,
+      planId: data.plan_id ?? null,
+      email: email ? email.toLowerCase() : null,
+      status: data.status ?? null,
+      valid: true,
+      expiresAt,
+    };
+
+    // Whop sends the address the customer paid with. Keeping it is what lets
+    // the recovery paths find this account again later.
+    if (email) await rememberBillingEmail(user, email);
+
+    // Same journal as the two recovery paths: a webhook replayed with a new
+    // delivery id credits nothing twice.
+    const granted = await grantFromMembership(user, membership, `whop:${action}`);
+    if (!granted.ok) {
+      console.warn("[whop] webhook refusé : adhésion déjà rattachée à un autre compte", {
+        membershipId,
+        userId: user.id,
+      });
+      return Response.json({ ok: true, conflict: true });
+    }
   } else if (REVOKING_EVENTS.has(action)) {
     await store.setPlan(user.id, "free", `whop:${action}`, null, membershipId);
   } else {

@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
-import { Alert, Badge, ButtonLink, SectionHeading, buttonClass } from "@/components/ui";
+import { PlanCheckoutButton } from "@/components/PlanCheckoutButton";
+import { Alert, Badge, ButtonLink, SectionHeading } from "@/components/ui";
 import { currentUser } from "@/lib/auth";
 import { hasActivePlan } from "@/lib/types";
-import { planCatalog } from "@/lib/whop";
+import { planCatalog, whopPlanIdFromUrl } from "@/lib/whop";
 
 export const dynamic = "force-dynamic";
 
@@ -138,13 +139,19 @@ export default async function PricingPage() {
                   ))}
                 </ul>
 
-                <a
+                <PlanCheckoutButton
+                  // Only a signed-in customer gets the embedded checkout: the
+                  // payment has to land on an account that already exists.
+                  planId={user ? whopPlanIdFromUrl(p.checkoutUrl) : null}
+                  planName={p.name}
+                  price={p.price}
+                  period={p.period}
                   href={hrefFor(p.checkoutUrl)}
-                  className={buttonClass(p.highlight ? "brand" : "outline", "md", "mt-8 w-full")}
-                  {...(p.checkoutUrl && user ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                >
-                  {!user ? "Créer un compte" : p.checkoutUrl ? `Payer ${p.price}€` : "Vérifier ma licence"}
-                </a>
+                  label={!user ? "Créer un compte" : p.checkoutUrl ? `Payer ${p.price}€` : "Vérifier ma licence"}
+                  accountEmail={user?.email ?? null}
+                  variant={p.highlight ? "brand" : "outline"}
+                  className="mt-8 w-full"
+                />
               </div>
             ))}
           </div>

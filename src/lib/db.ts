@@ -28,6 +28,20 @@ export interface Store {
     expiresAt: string | null,
     membershipId: string | null,
   ): Promise<void>;
+  /** The address the customer paid with, when it differs from their account address. */
+  setBillingEmail(userId: string, email: string): Promise<void>;
+  /** Matches on the account address OR the billing address. */
+  findUserByAnyEmail(email: string): Promise<User | null>;
+  /**
+   * Writes one line in the credit journal.
+   *
+   * `created` is false when this membership was already credited for this
+   * period. `ownerId` names the account that holds it — which is how a second
+   * account is stopped from claiming somebody else's payment.
+   */
+  recordPlanGrant(grant: PlanGrantInput): Promise<PlanGrantResult>;
+  /** Accounts to confront with Whop in the nightly reconciliation. */
+  listAccountsForReconcile(limit?: number): Promise<ReconcileAccount[]>;
   createGeneration(g: Omit<Generation, "id" | "createdAt">): Promise<Generation>;
   getGeneration(id: string): Promise<Generation | null>;
   listGenerations(userId: string, limit?: number): Promise<Generation[]>;
@@ -66,6 +80,35 @@ export type AdminStats = {
 
 export type PingResult = { ok: true; latencyMs: number } | { ok: false; error: string };
 
+/** One line of the credit journal. */
+export type PlanGrantInput = {
+  userId: string;
+  membershipId: string;
+  plan: Plan;
+  source: string;
+  /**
+   * Identifies the period being credited: the membership plus its renewal
+   * date. A renewal produces a new key and is credited again; re-opening the
+   * recovery page does not.
+   */
+  periodKey: string;
+  expiresAt: string | null;
+};
+
+export type PlanGrantResult = {
+  created: boolean;
+  /** The account this membership-period belongs to. */
+  ownerId: string;
+};
+
+export type ReconcileAccount = {
+  id: string;
+  email: string;
+  billingEmail: string | null;
+  plan: Plan;
+  planExpiresAt: string | null;
+};
+
 /* ------------------------------------------------------------------ */
 /* Memory driver                                                       */
 /* ------------------------------------------------------------------ */
@@ -74,6 +117,8 @@ type MemoryState = {
   users: Map<string, User>;
   generations: Map<string, Generation>;
   reviews: Map<string, Review>;
+  /** Credit journal: period key -> the account credited. */
+  grants: Map<string, string>;
 };
 
 const globalMemory = globalThis as unknown as { __repositsaas_memory?: MemoryState };
@@ -84,6 +129,7 @@ function memoryState(): MemoryState {
       users: new Map(),
       generations: new Map(),
       reviews: new Map(),
+      grants: new Map(),
     };
   }
   return globalMemory.__repositsaas_memory;
@@ -103,6 +149,7 @@ class MemoryStore implements Store {
       email: email.toLowerCase(),
       passwordHash,
       plan: "free",
+      billingEmail: null,
       planSource: null,
       planExpiresAt: null,
       whopMembershipId: null,
@@ -129,6 +176,38 @@ class MemoryStore implements Store {
     u.planSource = source;
     u.planExpiresAt = expiresAt;
     u.whopMembershipId = membershipId;
+  }
+
+  async setBillingEmail(userId: string, email: string) {
+    const u = memoryState().users.get(userId);
+    if (u) u.billingEmail = email.toLowerCase();
+  }
+
+  async findUserByAnyEmail(email: string) {
+    const target = email.trim().toLowerCase();
+    if (!target) return null;
+    for (const u of memoryState().users.values()) {
+      if (u.email === target || u.billingEmail === target) return u;
+    }
+    return null;
+  }
+
+  async recordPlanGrant(grant: PlanGrantInput): Promise<PlanGrantResult> {
+    const s = memoryState();
+    const existing = s.grants.get(grant.periodKey);
+    if (existing) return { created: false, ownerId: existing };
+    s.grants.set(grant.periodKey, grant.userId);
+    return { created: true, ownerId: grant.userId };
+  }
+
+  async listAccountsForReconcile(limit = 1000): Promise<ReconcileAccount[]> {
+    return [...memoryState().users.values()].slice(0, limit).map((u) => ({
+      id: u.id,
+      email: u.email,
+      billingEmail: u.billingEmail,
+      plan: u.plan,
+      planExpiresAt: u.planExpiresAt,
+    }));
   }
 
   async createGeneration(g: Omit<Generation, "id" | "createdAt">) {
@@ -229,6 +308,7 @@ function rowToUser(r: SqlRow): User {
     email: String(r.email),
     passwordHash: String(r.password_hash),
     plan: String(r.plan) as Plan,
+    billingEmail: r.billing_email ? String(r.billing_email) : null,
     planSource: r.plan_source ? String(r.plan_source) : null,
     planExpiresAt: r.plan_expires_at ? new Date(String(r.plan_expires_at)).toISOString() : null,
     whopMembershipId: r.whop_membership_id ? String(r.whop_membership_id) : null,
@@ -303,6 +383,26 @@ class PostgresStore implements Store {
       created_at timestamptz NOT NULL DEFAULT now()
     )`;
     await sql`CREATE INDEX IF NOT EXISTS generations_user_idx ON generations(user_id, created_at DESC)`;
+
+    // Added after the first deployments, so it is an ALTER rather than part of
+    // the CREATE above: existing databases must pick it up too.
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_email text`;
+    await sql`CREATE INDEX IF NOT EXISTS users_billing_email_idx ON users(billing_email)`;
+
+    // The credit journal. The unique key is what makes granting idempotent:
+    // re-opening the recovery page or re-running the nightly job writes
+    // nothing the second time.
+    await sql`CREATE TABLE IF NOT EXISTS plan_grants (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      membership_id text NOT NULL,
+      plan text NOT NULL,
+      source text NOT NULL,
+      period_key text NOT NULL,
+      expires_at timestamptz,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      UNIQUE (period_key)
+    )`;
   }
 
   async createUser(email: string, passwordHash: string) {
@@ -331,6 +431,53 @@ class PostgresStore implements Store {
       UPDATE users
       SET plan = ${plan}, plan_source = ${source}, plan_expires_at = ${expiresAt}, whop_membership_id = ${membershipId}
       WHERE id = ${userId}`;
+  }
+
+  async setBillingEmail(userId: string, email: string) {
+    await this.init();
+    await this.sql`UPDATE users SET billing_email = ${email.toLowerCase()} WHERE id = ${userId}`;
+  }
+
+  async findUserByAnyEmail(email: string) {
+    await this.init();
+    const target = email.trim().toLowerCase();
+    if (!target) return null;
+    const rows = await this.sql`
+      SELECT * FROM users
+      WHERE email = ${target} OR billing_email = ${target}
+      ORDER BY (email = ${target}) DESC
+      LIMIT 1`;
+    return rows[0] ? rowToUser(rows[0]) : null;
+  }
+
+  async recordPlanGrant(grant: PlanGrantInput): Promise<PlanGrantResult> {
+    await this.init();
+    const inserted = await this.sql`
+      INSERT INTO plan_grants (user_id, membership_id, plan, source, period_key, expires_at)
+      VALUES (${grant.userId}, ${grant.membershipId}, ${grant.plan}, ${grant.source}, ${grant.periodKey}, ${grant.expiresAt})
+      ON CONFLICT (period_key) DO NOTHING
+      RETURNING user_id`;
+    if (inserted.length > 0) return { created: true, ownerId: String(inserted[0].user_id) };
+
+    const existing = await this.sql`
+      SELECT user_id FROM plan_grants WHERE period_key = ${grant.periodKey} LIMIT 1`;
+    return { created: false, ownerId: existing[0] ? String(existing[0].user_id) : grant.userId };
+  }
+
+  async listAccountsForReconcile(limit = 1000): Promise<ReconcileAccount[]> {
+    await this.init();
+    const rows = await this.sql`
+      SELECT id, email, billing_email, plan, plan_expires_at
+      FROM users
+      ORDER BY created_at DESC
+      LIMIT ${limit}`;
+    return rows.map((r) => ({
+      id: String(r.id),
+      email: String(r.email),
+      billingEmail: r.billing_email ? String(r.billing_email) : null,
+      plan: String(r.plan) as Plan,
+      planExpiresAt: r.plan_expires_at ? new Date(String(r.plan_expires_at)).toISOString() : null,
+    }));
   }
 
   async createGeneration(g: Omit<Generation, "id" | "createdAt">) {

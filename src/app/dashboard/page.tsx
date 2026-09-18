@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/LogoutButton";
+import { RecoverAccessButton } from "@/components/RecoverAccessButton";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ButtonLink } from "@/components/ui";
@@ -62,6 +63,11 @@ export default async function DashboardPage() {
                 <span className="text-ink-500"> · renouvellement le {formatDate(user.planExpiresAt)}</span>
               )}
             </p>
+            {user.billingEmail && (
+              <p className="mt-1 text-[12.5px] text-ink-500">
+                Paiement rattaché à <span className="text-ink-300">{user.billingEmail}</span>
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-4">
             <LogoutButton />
@@ -106,7 +112,7 @@ export default async function DashboardPage() {
         </div>
 
         {!unlocked && (
-          <div className="surface mt-6 flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="surface mt-6 flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[15px] font-medium text-white">Tes briefs sont verrouillés</p>
               <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-400">
@@ -114,9 +120,14 @@ export default async function DashboardPage() {
                 mais aucune ligne n&apos;est lisible sans plan actif.
               </p>
             </div>
-            <ButtonLink href="/pricing" variant="brand" className="shrink-0">
-              Voir les tarifs
-            </ButtonLink>
+            <div className="flex w-full shrink-0 flex-col gap-2.5 sm:w-56">
+              <ButtonLink href="/pricing" variant="brand">
+                Voir les tarifs
+              </ButtonLink>
+              {/* Payment made but access still locked: this asks Whop rather
+                  than waiting for a webhook that may never arrive. */}
+              <RecoverAccessButton variant="outline" size="sm" />
+            </div>
           </div>
         )}
 

@@ -11,7 +11,11 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import type { Plan } from "./types";
 
-const WHOP_API = "https://api.whop.com/api/v2";
+/**
+ * Overridable so the recovery paths can be exercised against a mock or a
+ * sandbox. Unset — the normal case — it is the live API.
+ */
+const WHOP_API = process.env.WHOP_API_URL?.replace(/\/+$/, "") || "https://api.whop.com/api/v2";
 
 export type PlanConfig = {
   key: Exclude<Plan, "free">;
@@ -133,6 +137,173 @@ export function planFromWhopPlanId(planId: string | null | undefined): Plan {
 
 export function billingConfigured(): boolean {
   return planCatalog().some((p) => p.checkoutUrl !== null);
+}
+
+/**
+ * Pulls the plan id out of a checkout URL — `.../checkout/plan_XXXX` — so the
+ * embedded checkout is driven by the real links of the project instead of an
+ * id retyped by hand somewhere else.
+ *
+ * Returns null for anything that is not a Whop checkout URL, which is exactly
+ * what the button uses to decide between the modal and a plain redirect.
+ */
+export function whopPlanIdFromUrl(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    if (!/(^|\.)whop\.com$/i.test(parsed.hostname)) return null;
+    const fromPath = parsed.pathname.match(/\/checkout\/(plan_[A-Za-z0-9]+)/);
+    if (fromPath) return fromPath[1];
+    const fromQuery = parsed.searchParams.get("planId") ?? parsed.searchParams.get("plan_id");
+    return fromQuery && /^plan_[A-Za-z0-9]+$/.test(fromQuery) ? fromQuery : null;
+  } catch {
+    return null;
+  }
+}
+
+/* ----------------------- memberships (API) -------------------------- */
+
+export type WhopMembership = {
+  id: string;
+  planId: string | null;
+  email: string | null;
+  status: string | null;
+  valid: boolean;
+  expiresAt: string | null;
+};
+
+export type MembershipLookup =
+  | { ok: true; memberships: WhopMembership[] }
+  | { ok: false; reason: string; configured: boolean };
+
+function toIso(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    // Whop timestamps are in seconds.
+    return new Date(value * 1000).toISOString();
+  }
+  if (typeof value === "string" && value.trim()) {
+    const d = new Date(/^\d+$/.test(value) ? Number(value) * 1000 : value);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  return null;
+}
+
+/**
+ * Normalises one membership.
+ *
+ * Written defensively on purpose: the exact field names of the Whop API are
+ * not pinned by anything in this repo, so every field is read from a few
+ * plausible places and a missing one degrades instead of throwing.
+ */
+function toMembership(raw: Record<string, unknown>): WhopMembership | null {
+  const id = typeof raw.id === "string" ? raw.id : null;
+  if (!id) return null;
+
+  const user = (raw.user ?? {}) as Record<string, unknown>;
+  const email =
+    (typeof raw.email === "string" && raw.email) ||
+    (typeof user.email === "string" && user.email) ||
+    null;
+
+  const status = typeof raw.status === "string" ? raw.status : null;
+  const valid =
+    raw.valid === true || status === "active" || status === "completed" || status === "trialing";
+
+  return {
+    id,
+    planId: typeof raw.plan_id === "string" ? raw.plan_id : typeof raw.plan === "string" ? raw.plan : null,
+    email: email ? email.toLowerCase() : null,
+    status,
+    valid,
+    expiresAt: toIso(raw.renewal_period_end ?? raw.expires_at ?? null),
+  };
+}
+
+/**
+ * Valid memberships known to Whop, optionally narrowed to one email.
+ *
+ * This is the read that both recovery paths depend on. The access it grants
+ * comes from THIS answer — never from what the customer says they paid.
+ */
+export async function listValidMemberships(email?: string): Promise<MembershipLookup> {
+  const apiKey = process.env.WHOP_API_KEY;
+  if (!apiKey) {
+    return {
+      ok: false,
+      configured: false,
+      reason: "La récupération automatique n'est pas configurée sur ce déploiement (WHOP_API_KEY absente).",
+    };
+  }
+
+  const url = new URL(`${WHOP_API}/memberships`);
+  url.searchParams.set("valid", "true");
+  url.searchParams.set("per", "50");
+  if (email) url.searchParams.set("email", email.trim().toLowerCase());
+
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
+      cache: "no-store",
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      return { ok: false, configured: true, reason: "Whop a refusé la clé d'API (401/403)." };
+    }
+    if (!res.ok) {
+      return { ok: false, configured: true, reason: `Whop a répondu ${res.status}. Réessaie dans un instant.` };
+    }
+
+    const body = (await res.json()) as unknown;
+    const rows = Array.isArray(body)
+      ? body
+      : Array.isArray((body as { data?: unknown }).data)
+        ? ((body as { data: unknown[] }).data)
+        : [];
+
+    if (!Array.isArray(body) && !Array.isArray((body as { data?: unknown }).data)) {
+      console.warn("[whop] réponse /memberships inattendue, aucune adhésion lue", Object.keys(body ?? {}));
+    }
+
+    const memberships = rows
+      .map((r) => toMembership(r as Record<string, unknown>))
+      .filter((m): m is WhopMembership => m !== null && m.valid);
+
+    return { ok: true, memberships };
+  } catch {
+    return { ok: false, configured: true, reason: "Impossible de joindre Whop." };
+  }
+}
+
+/** The valid membership matching any of the account's addresses, if there is one. */
+export async function findMembershipForEmails(emails: (string | null)[]): Promise<MembershipLookup & { match?: WhopMembership }> {
+  const wanted = emails
+    .filter((e): e is string => typeof e === "string" && e.trim().length > 0)
+    .map((e) => e.trim().toLowerCase());
+  if (wanted.length === 0) return { ok: true, memberships: [] };
+
+  // Ask Whop per address first: a filtered query is cheaper and does not
+  // depend on the account being on the first page of the full list.
+  for (const email of wanted) {
+    const res = await listValidMemberships(email);
+    if (!res.ok) return res;
+    const match = res.memberships.find((m) => !m.email || m.email === email);
+    if (match) return { ok: true, memberships: res.memberships, match };
+  }
+
+  // The `email` filter may simply be ignored by the API; fall back to scanning.
+  const all = await listValidMemberships();
+  if (!all.ok) return all;
+  const match = all.memberships.find((m) => m.email && wanted.includes(m.email));
+  return { ok: true, memberships: all.memberships, match };
+}
+
+/**
+ * The idempotency key of a grant: the membership plus the period it covers.
+ * A renewal changes the date and is credited again; re-running a recovery is
+ * a no-op.
+ */
+export function periodKeyFor(membershipId: string, expiresAt: string | null): string {
+  return `${membershipId}:${expiresAt ?? "lifetime"}`;
 }
 
 /* --------------------------- webhook ------------------------------- */

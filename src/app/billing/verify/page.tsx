@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LicenseForm } from "@/components/LicenseForm";
+import { RecoverAccessButton } from "@/components/RecoverAccessButton";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Alert } from "@/components/ui";
@@ -44,7 +45,24 @@ export default async function VerifyPage() {
               .
             </Alert>
           ) : (
-            <LicenseForm />
+            <>
+              {/* Tried first: it needs nothing from the customer but the click. */}
+              <p className="text-[13.5px] font-medium text-white">Vérification automatique</p>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-ink-400">
+                On demande directement à Whop si un abonnement actif correspond à ton compte.
+              </p>
+              <div className="mt-4">
+                <RecoverAccessButton variant="brand" label="J'ai déjà payé — vérifier" />
+              </div>
+
+              <div className="my-7 flex items-center gap-3 text-[12px] text-ink-600">
+                <span className="h-px flex-1 bg-white/[0.07]" />
+                ou avec ta clé de licence
+                <span className="h-px flex-1 bg-white/[0.07]" />
+              </div>
+
+              <LicenseForm />
+            </>
           )}
         </div>
 

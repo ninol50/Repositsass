@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { PromptActions } from "@/components/PromptActions";
+import { RecoverAccessButton } from "@/components/RecoverAccessButton";
 import { ResultStages } from "@/components/ResultStages";
 import { SitePreview } from "@/components/SitePreview";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -234,9 +235,9 @@ function SitePreviewStage({
                 <ButtonLink href="/pricing" variant="brand">
                   Débloquer mon site
                 </ButtonLink>
-                <ButtonLink href="/billing/verify" variant="ghost" size="sm">
-                  J&apos;ai déjà payé
-                </ButtonLink>
+                {/* Checks the payment against Whop on the spot, instead of
+                    sending someone who already paid off to another page. */}
+                <RecoverAccessButton variant="ghost" size="sm" />
               </div>
             </div>
           </div>
@@ -327,13 +328,11 @@ function LockedBrief({
         ))}
       </ul>
 
-      <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-        <ButtonLink href="/pricing" variant="brand" size="lg">
+      <div className="mx-auto mt-10 flex max-w-md flex-col items-center gap-3">
+        <ButtonLink href="/pricing" variant="brand" size="lg" className="w-full">
           Débloquer mon brief
         </ButtonLink>
-        <ButtonLink href="/billing/verify" variant="ghost" size="lg">
-          J&apos;ai déjà payé
-        </ButtonLink>
+        <RecoverAccessButton variant="ghost" size="md" />
       </div>
 
       <p className="mt-6 text-center text-[12.5px] text-ink-500">

@@ -95,7 +95,9 @@ actif et ce qui n'est pas configuré.
 | `WHOP_PLAN_BASIC_ID` / `_PRO_ID` / `_MAX_ID` | non | Les plans en production sont câblés dans `src/lib/whop.ts` (les IDs sont publics, ils figurent dans l'URL de checkout). Ces variables ne servent qu'à les remplacer. |
 | `WHOP_PLAN_*_URL` | non | URL de checkout complètes, prioritaires sur les ID. |
 | `WHOP_WEBHOOK_SECRET` | pour vendre | Sans lui, **tous** les webhooks sont rejetés et aucun accès n'est accordé. |
-| `WHOP_API_KEY` | optionnel | Active la vérification manuelle de licence sur `/billing/verify`. |
+| `WHOP_API_KEY` | **fortement conseillé** | Alimente les deux filets de sécurité : le bouton « J'ai déjà payé » et la réconciliation quotidienne. Sans elle, un webhook perdu = un client qui a payé et reste bloqué. |
+| `CRON_SECRET` | pour la réconciliation | Envoyé par Vercel en `Authorization: Bearer`. Absent, la tâche planifiée refuse de s'exécuter. |
+| `WHOP_API_URL` | non | Bascule l'API Whop vers un bouchon local. Ne sert qu'aux tests. |
 
 ---
 
@@ -108,6 +110,11 @@ actif et ce qui n'est pas configuré.
    aucun avertissement.
 5. Côté Whop : pointer le webhook sur `https://<domaine>/api/webhooks/whop` et
    renseigner `WHOP_WEBHOOK_SECRET`. Les plans sont déjà câblés.
+6. Renseigner `WHOP_API_KEY` et `CRON_SECRET`, puis **redéployer** : une variable
+   ajoutée ne s'applique pas au déploiement déjà en ligne.
+
+`/api/health` expose `billingPaths` : les trois chemins d'octroi et lesquels sont
+réellement câblés.
 
 Aucune commande de migration à lancer : le schéma se crée tout seul au premier appel
 à la base (`CREATE TABLE IF NOT EXISTS`).
@@ -139,14 +146,55 @@ Postgres. Les sessions restent gérées par l'application (scrypt + JWT).
 
 ## Modèle de paiement
 
-L'accès payant est accordé **uniquement côté serveur**, par deux chemins :
+Le paiement s'ouvre **dans une modale par-dessus le site** (`WhopCheckout`), pas sur
+whop.com : le script `js.whop.com/static/checkout/loader.js` est injecté une fois dans
+le `<head>`, au moment où quelqu'un ouvre réellement un checkout, et remplit une div
+portant `data-whop-checkout-plan-id`. L'identifiant du plan est extrait des liens de
+checkout du projet (`whopPlanIdFromUrl`), jamais retapé ailleurs.
+
+Le script vient d'un domaine tiers et peut ne jamais répondre. Un `MutationObserver`
+surveille la div : tant qu'aucun iframe n'est apparu, la modale affiche un état
+d'attente, et au bout de 5 secondes un lien de repli vers Whop — qui **disparaît** dès
+que le formulaire s'affiche, parce que proposer une sortie à côté d'un paiement qui
+marche ne fait que tenter le client de partir.
+
+### Le piège de l'email
+
+Whop pré-remplit l'adresse du compte **Whop** du client, qui n'est souvent pas celle de
+son compte ici. Or c'est l'email qui rattache un paiement à un compte. La modale affiche
+donc l'avertissement **au-dessus** du formulaire (en dessous, il est lu après avoir
+rempli), et la colonne `users.billing_email` rattrape ceux qui ont payé avec une autre
+adresse.
+
+### Trois chemins d'octroi, un seul journal
+
+L'accès payant est accordé **uniquement côté serveur**, par trois chemins qui passent
+tous par `grantFromMembership()` :
 
 1. **Webhook** (`/api/webhooks/whop`) — la source de vérité. Signature HMAC-SHA256
    vérifiée en temps constant, traitement idempotent par identifiant de livraison.
-   Le compte est retrouvé via `metadata[user_id]` attaché au lien de checkout, avec
-   repli sur l'email.
-2. **Clé de licence** (`/billing/verify`) — filet de sécurité quand un webhook s'est
-   perdu. Appelle l'API Whop et n'accorde l'accès que si la licence est active.
+   Le compte est retrouvé via `metadata[user_id]`, avec repli sur l'email de compte
+   **et** l'email de facturation.
+2. **« J'ai déjà payé »** (`/api/billing/recover`) — interroge l'API Whop pour les
+   adresses du compte. Si rien n'est trouvé, la page demande l'adresse utilisée pour
+   payer, l'enregistre, et retente. Un webhook est un point de panne unique : sans ce
+   bouton, un client qui a payé reste bloqué sans que personne le sache.
+3. **Réconciliation quotidienne** (`/api/cron/reconcile-billing`, `vercel.json`) —
+   confronte tous les abonnements valides aux comptes. C'est le seul chemin qui ne
+   dépend de rien : ni d'une livraison qui arrive, ni d'un client qui pense à cliquer.
+   Protégé par `CRON_SECRET`, comparé en temps constant ; sans secret, la route refuse.
+
+Une **clé de licence** (`/billing/verify`) reste disponible en dernier recours.
+
+Règles tenues sur les trois chemins :
+
+- c'est la réponse de Whop qui accorde l'accès, jamais une déclaration du client ;
+- la route agit sur le compte de la session — un identifiant reçu dans la requête
+  laisserait n'importe qui débloquer le compte d'un autre ;
+- chaque octroi passe par le journal `plan_grants`, dont la clé unique est
+  `membership_id:date_de_renouvellement`. Revenir sur la page ne crédite pas deux fois,
+  un renouvellement crédite bien à nouveau, et une adhésion déjà créditée à un compte
+  **ne peut pas** être réclamée par un autre.
 
 La redirection de retour depuis Whop n'accorde jamais rien.
 
@@ -172,6 +220,8 @@ src/
 │   ├── ideas/                   catalogue d'idées (Pro)
 │   ├── guide/                   guide brief → site en ligne (Pro)
 │   ├── billing/verify/          récupération de licence
+│   ├── api/billing/recover/     « J'ai déjà payé » : interroge Whop
+│   ├── api/cron/reconcile-billing/  rattrapage quotidien
 │   └── api/                     auth, generate, reviews, billing, webhooks, health
 ├── components/                  UI (serveur + client)
 ├── lib/
@@ -184,7 +234,8 @@ src/
 │   ├── auth.ts                  scrypt + sessions JWT
 │   ├── plans.ts                 capacités et quotas par plan
 │   ├── ideas.ts                 catalogue d'idées (vide par défaut)
-│   ├── whop.ts                  catalogue de plans, webhook, licences
+│   ├── whop.ts                  catalogue de plans, webhook, licences, adhésions
+│   ├── billing.ts               octroi d'accès idempotent, partagé par les 3 chemins
 │   └── rate-limit.ts            limitation de débit en mémoire
 └── middleware.ts                redirection Edge pour les routes protégées
 ```
