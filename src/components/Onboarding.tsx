@@ -308,10 +308,12 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
   if (phase === "consent") {
     return (
       <div className="surface relative p-6 sm:p-8">
-        <span className="absolute right-5 top-5 rounded-full border border-gold-400/30 bg-gold-400/10 px-3 py-1 text-[12px] font-medium text-gold-300">
-          Plus que 2 étapes 🔥
-        </span>
-        <h2 className="max-w-[80%] font-display text-[24px] font-semibold leading-tight tracking-tight text-white sm:text-[28px]">
+        <div className="mb-3 flex justify-end">
+          <span className="rounded-full border border-gold-400/30 bg-gold-400/10 px-3 py-1 text-[12px] font-medium text-gold-300">
+            Plus que 2 étapes 🔥
+          </span>
+        </div>
+        <h2 className="font-display text-[24px] font-semibold leading-tight tracking-tight text-white sm:text-[28px]">
           Avant de construire ton plan
         </h2>
 
@@ -363,10 +365,12 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
   if (phase === "oath") {
     return (
       <div className="surface relative p-6 sm:p-8">
-        <span className="absolute right-5 top-5 rounded-full border border-gold-400/30 bg-gold-400/10 px-3 py-1 text-[12px] font-medium text-gold-300">
-          Dernière étape
-        </span>
-        <h2 className="max-w-[75%] font-display text-[24px] font-semibold leading-tight tracking-tight text-white sm:text-[28px]">
+        <div className="mb-3 flex justify-end">
+          <span className="rounded-full border border-gold-400/30 bg-gold-400/10 px-3 py-1 text-[12px] font-medium text-gold-300">
+            Dernière étape
+          </span>
+        </div>
+        <h2 className="font-display text-[24px] font-semibold leading-tight tracking-tight text-white sm:text-[28px]">
           Ton engagement
         </h2>
         <p className="mt-4 text-center font-display text-[19px] font-semibold leading-snug text-white sm:text-[21px]">
