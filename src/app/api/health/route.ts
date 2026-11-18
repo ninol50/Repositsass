@@ -47,6 +47,22 @@ export async function GET() {
     warnings.push(`Connexion à la base impossible : ${ping.error}`);
   }
 
+  // Reaching the database is not enough: the tables must be creatable too.
+  let tablesReady = false;
+  if (ping.ok) {
+    try {
+      await getStore().init();
+      tablesReady = true;
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      const message = err instanceof Error ? err.message : String(err);
+      warnings.push(`Création des tables impossible${code ? ` (code ${code})` : ""} : ${message.slice(0, 200)}`);
+    }
+  }
+  if (!process.env.ADMIN_EMAILS) {
+    warnings.push("ADMIN_EMAILS absent : la page /admin est inaccessible.");
+  }
+
   if (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.length < 32) {
     warnings.push("AUTH_SECRET absent ou trop court : les sessions ne sont pas sûres.");
   }
@@ -56,7 +72,7 @@ export async function GET() {
       storage: driver,
       // Host and port only — never the credentials.
       database: db
-        ? { host: db.host, port: db.port, pooled: db.pooled, reachable: ping.ok, ...(ping.ok ? { latencyMs: ping.latencyMs } : {}) }
+        ? { host: db.host, port: db.port, pooled: db.pooled, reachable: ping.ok, tablesReady, ...(ping.ok ? { latencyMs: ping.latencyMs } : {}) }
         : null,
       warnings,
     },

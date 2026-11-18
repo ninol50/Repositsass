@@ -2,7 +2,7 @@ import { currentUser } from "@/lib/auth";
 import { getStore } from "@/lib/db";
 import { validateAnswers } from "@/lib/questions";
 import { clientKey, rateLimit, tooManyRequests } from "@/lib/rate-limit";
-import { databaseFailure, isDatabaseError } from "@/lib/setup";
+import { serverFailure } from "@/lib/setup";
 
 export const runtime = "nodejs";
 
@@ -32,7 +32,6 @@ export async function POST(req: Request) {
     const generation = await getStore().createGeneration(user.id, validation.answers);
     return Response.json({ id: generation.id }, { status: 201 });
   } catch (err) {
-    if (isDatabaseError(err)) return databaseFailure(err);
-    throw err;
+    return serverFailure(err, "generate");
   }
 }

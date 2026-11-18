@@ -1,7 +1,7 @@
 import { setSessionCookie, verifyPassword } from "@/lib/auth";
 import { getStore } from "@/lib/db";
 import { clientKey, rateLimit, tooManyRequests } from "@/lib/rate-limit";
-import { databaseFailure, isDatabaseError, setupBlocker } from "@/lib/setup";
+import { serverFailure, setupBlocker } from "@/lib/setup";
 
 export const runtime = "nodejs";
 
@@ -34,7 +34,6 @@ export async function POST(req: Request) {
     await setSessionCookie(user.id);
     return Response.json({ ok: true });
   } catch (err) {
-    if (isDatabaseError(err)) return databaseFailure(err);
-    throw err;
+    return serverFailure(err, "login");
   }
 }

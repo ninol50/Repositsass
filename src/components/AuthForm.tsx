@@ -47,7 +47,10 @@ export function AuthForm({
       const data = (await res.json().catch(() => ({}))) as { error?: string };
 
       if (!res.ok) {
-        setError(data.error ?? "Quelque chose n'a pas fonctionné.");
+        setError(
+          data.error ??
+            `Le serveur a répondu une erreur ${res.status}. Ouvre /api/health sur ton site pour voir ce qui manque.`,
+        );
         setPending(false);
         return;
       }
