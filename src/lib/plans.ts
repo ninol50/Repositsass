@@ -21,6 +21,8 @@ export type PlanOffer = {
    * a questionnaire is running (see PROMO). Afterwards: monthlyPrice.
    */
   launchPrice: number;
+  /** Price of a year paid at once. */
+  yearlyPrice: number;
   /** Businesses whose full plan is opened. */
   businessPlans: number;
   /** Questionnaires (generations) included. null = unlimited. */
@@ -37,6 +39,7 @@ export const OFFERS: PlanOffer[] = [
     tagline: "Pour démarrer avec le business le plus simple.",
     monthlyPrice: 26,
     launchPrice: 22,
+    yearlyPrice: 260,
     businessPlans: 1,
     questionnaires: 1,
     automations: false,
@@ -52,6 +55,7 @@ export const OFFERS: PlanOffer[] = [
     tagline: "Tous les business, automatisés à ta place.",
     monthlyPrice: 45,
     launchPrice: 39.99,
+    yearlyPrice: 450,
     businessPlans: 5,
     questionnaires: null,
     automations: true,
@@ -65,6 +69,33 @@ export const OFFERS: PlanOffer[] = [
 ];
 
 export const TOTAL_BUSINESSES = 5;
+
+export type Billing = "monthly" | "yearly";
+
+/** Months saved by paying yearly, shown as "2 mois offerts". */
+export function monthsOffered(offer: PlanOffer): number {
+  return Math.round((offer.monthlyPrice * 12 - offer.yearlyPrice) / offer.monthlyPrice);
+}
+
+/**
+ * What each offer includes, line by line: ✅ when included, 🚫 when not.
+ * The same list on every card, so the difference between offers is visible.
+ * A string replaces the label for that offer (e.g. a limit).
+ */
+export const FEATURES: { label: string; starter: boolean | string; pro: boolean | string }[] = [
+  { label: "Le Clipping, son plan complet et son guide", starter: true, pro: true },
+  { label: "Tous les business débloqués", starter: false, pro: true },
+  { label: "Questionnaires illimités", starter: "1 seul questionnaire", pro: true },
+  { label: "Les automatisations, faites à ta place", starter: false, pro: true },
+  { label: "Des guides plus complets, avec plus de pages", starter: false, pro: true },
+];
+
+/** One line of an offer's checklist. A limit counts as included, with its own wording. */
+export function featureFor(offer: PlanOffer, f: (typeof FEATURES)[number]): { included: boolean; label: string } {
+  const value = f[offer.id];
+  if (typeof value === "string") return { included: true, label: value };
+  return { included: value, label: f.label };
+}
 
 /** The offer we put forward: best value, shown by default. */
 export const BEST_VALUE: PlanOffer["id"] = "pro";

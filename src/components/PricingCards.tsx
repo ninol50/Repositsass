@@ -1,10 +1,128 @@
-import { BEST_VALUE, OFFERS, formatPrice, type PlanOffer } from "@/lib/plans";
+"use client";
+
+import { useState } from "react";
+import {
+  BEST_VALUE,
+  FEATURES,
+  OFFERS,
+  featureFor,
+  formatPrice,
+  monthsOffered,
+  type Billing,
+  type PlanOffer,
+} from "@/lib/plans";
 import type { Plan } from "@/lib/types";
 import { PlanButton } from "./PlanButton";
-import { CheckIcon, cx } from "./ui";
+import { cx } from "./ui";
+
+/** ✅ included (bold) / 🚫 not included (dimmed), the same lines on every offer. */
+export function FeatureList({ offer, className }: { offer: PlanOffer; className?: string }) {
+  return (
+    <ul className={cx("space-y-2.5", className)}>
+      {FEATURES.map((f) => {
+        const { included, label } = featureFor(offer, f);
+        return (
+          <li
+            key={f.label}
+            className={cx(
+              "flex items-start gap-2.5 text-[13.5px] leading-snug",
+              included ? "font-semibold text-white" : "text-ink-500",
+            )}
+          >
+            <span className="shrink-0" aria-hidden>
+              {included ? "✅" : "🚫"}
+            </span>
+            <span>
+              <span className="sr-only">{included ? "Inclus : " : "Non inclus : "}</span>
+              <span className={included ? undefined : "line-through decoration-ink-600"}>{label}</span>
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** Monthly by default; yearly on request. */
+export function BillingToggle({ value, onChange }: { value: Billing; onChange: (b: Billing) => void }) {
+  const options: { id: Billing; label: string }[] = [
+    { id: "monthly", label: "Mensuel" },
+    { id: "yearly", label: "Annuel · 2 mois offerts" },
+  ];
+  return (
+    <div role="radiogroup" aria-label="Facturation" className="mx-auto flex w-fit rounded-full border border-white/10 bg-ink-950/70 p-1">
+      {options.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          role="radio"
+          aria-checked={value === o.id}
+          onClick={() => onChange(o.id)}
+          className={cx(
+            "rounded-full px-4 py-2 text-[13px] font-semibold transition-colors",
+            value === o.id ? "bg-white text-ink-950" : "text-ink-300 hover:text-white",
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Price({ offer, billing, promo, launchNote }: { offer: PlanOffer; billing: Billing; promo: boolean; launchNote: boolean }) {
+  if (billing === "yearly") {
+    return (
+      <div className="mt-5">
+        <p className="flex items-baseline gap-1">
+          <span className="whitespace-nowrap font-display text-[40px] font-bold tracking-tight text-white">
+            {formatPrice(offer.yearlyPrice)}
+          </span>
+          <span className="text-[14px] text-ink-400">/ an</span>
+        </p>
+        <p className="mt-1 text-[12.5px] font-medium text-brand-300">
+          soit {formatPrice(Math.round((offer.yearlyPrice / 12) * 100) / 100)} / mois · {monthsOffered(offer)} mois offerts
+        </p>
+      </div>
+    );
+  }
+
+  if (promo) {
+    return (
+      <div className="mt-5">
+        <p className="flex items-baseline gap-2">
+          <span className="whitespace-nowrap font-display text-[40px] font-bold tracking-tight text-white">
+            {formatPrice(offer.launchPrice)}
+          </span>
+          <span className="text-[16px] text-ink-500 line-through">{formatPrice(offer.monthlyPrice)}</span>
+        </p>
+        <p className="mt-1 text-[12.5px] font-medium text-gold-300">
+          le premier mois, puis {formatPrice(offer.monthlyPrice)} / mois
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-5">
+      <p className="flex items-baseline gap-1">
+        <span className="whitespace-nowrap font-display text-[40px] font-bold tracking-tight text-white">
+          {formatPrice(offer.monthlyPrice)}
+        </span>
+        <span className="text-[14px] text-ink-400">/ mois</span>
+      </p>
+      {launchNote && (
+        <p className="mt-1 text-[12.5px] text-gold-300">
+          {formatPrice(offer.launchPrice)} le premier mois, juste après ton questionnaire
+        </p>
+      )}
+    </div>
+  );
+}
 
 export function OfferCard({
   offer,
+  billing = "monthly",
   promo = false,
   current = false,
   featured = false,
@@ -12,7 +130,8 @@ export function OfferCard({
   launchNote = false,
 }: {
   offer: PlanOffer;
-  /** True only while a just-generated plan's launch offer is still running. */
+  billing?: Billing;
+  /** True only while a just-generated plan's launch price is still running. */
   promo?: boolean;
   current?: boolean;
   featured?: boolean;
@@ -38,47 +157,22 @@ export function OfferCard({
       <p className="font-display text-[18px] font-semibold text-white">{offer.name}</p>
       <p className="mt-1 text-[13px] text-ink-400">{offer.tagline}</p>
 
-      {promo ? (
-        <div className="mt-5">
-          <p className="flex items-baseline gap-2">
-            <span className="whitespace-nowrap font-display text-[40px] font-bold tracking-tight text-white">
-              {formatPrice(offer.launchPrice)}
-            </span>
-            <span className="text-[16px] text-ink-500 line-through">{formatPrice(offer.monthlyPrice)}</span>
-          </p>
-          <p className="mt-1 text-[12.5px] font-medium text-gold-300">
-            le premier mois, puis {formatPrice(offer.monthlyPrice)} / mois
-          </p>
-        </div>
-      ) : (
-        <p className="mt-5 flex items-baseline gap-1">
-          <span className="whitespace-nowrap font-display text-[40px] font-bold tracking-tight text-white">{offer.monthlyPrice} €</span>
-          <span className="text-[14px] text-ink-400">/ mois</span>
-        </p>
-      )}
-      {!promo && launchNote && (
-        <p className="mt-1 text-[12.5px] text-gold-300">
-          {formatPrice(offer.launchPrice)} le premier mois, juste après ton questionnaire
-        </p>
-      )}
+      <Price offer={offer} billing={billing} promo={promo} launchNote={launchNote} />
 
-      <ul className="mt-5 flex-1 space-y-2.5">
-        {offer.perks.map((perk) => (
-          <li key={perk} className="flex items-start gap-2.5 text-[13.5px] leading-snug text-ink-200">
-            <CheckIcon className="mt-[3px] shrink-0 text-brand-400" />
-            {perk}
-          </li>
-        ))}
-      </ul>
+      <FeatureList offer={offer} className="mt-5 flex-1" />
 
       <div className="mt-6">
-        <PlanButton planName={offer.name} highlighted={featured} current={current} />
+        <PlanButton
+          planName={billing === "yearly" ? `${offer.name} annuel` : offer.name}
+          highlighted={featured}
+          current={current}
+        />
       </div>
     </div>
   );
 }
 
-/** All the offers side by side (pricing page, home page). */
+/** All the offers side by side (pricing page, home page, result page once paying). */
 export function PricingCards({
   currentPlan,
   promo = false,
@@ -88,19 +182,24 @@ export function PricingCards({
   promo?: boolean;
   launchNote?: boolean;
 }) {
+  const [billing, setBilling] = useState<Billing>("monthly");
   return (
-    <div className="mx-auto grid max-w-3xl gap-4 md:grid-cols-2">
-      {OFFERS.map((offer) => (
-        <OfferCard
-          key={offer.id}
-          offer={offer}
-          promo={promo}
-          current={currentPlan === offer.id || (currentPlan === "elite" && offer.id === "pro")}
-          launchNote={launchNote}
-          featured={offer.id === BEST_VALUE}
-          badge={offer.id === BEST_VALUE ? "Le plus avantageux" : undefined}
-        />
-      ))}
+    <div>
+      <BillingToggle value={billing} onChange={setBilling} />
+      <div className="mx-auto mt-8 grid max-w-3xl gap-4 md:grid-cols-2">
+        {OFFERS.map((offer) => (
+          <OfferCard
+            key={offer.id}
+            offer={offer}
+            billing={billing}
+            promo={promo}
+            current={currentPlan === offer.id || (currentPlan === "elite" && offer.id === "pro")}
+            featured={offer.id === BEST_VALUE}
+            badge={offer.id === BEST_VALUE ? "Le plus avantageux" : undefined}
+            launchNote={launchNote}
+          />
+        ))}
+      </div>
     </div>
   );
 }

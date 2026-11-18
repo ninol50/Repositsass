@@ -33,10 +33,15 @@ Un visiteur déjà connecté passe la pause sans s'arrêter.
 | --- | --- | --- |
 | Prix | 26 € / mois | 45 € / mois |
 | Prix de lancement (1er mois, 5 min après le questionnaire) | 22 € | 39,99 € |
+| Annuel (sélecteur, mensuel par défaut) | 260 € / an | 450 € / an |
 | Business | 1 : toujours le Clipping | tous |
 | Questionnaires | 1 (vérifié côté serveur) | illimités |
 | Automatisations | non | faites à ta place |
 | Guides | le plan et son guide | plus complets, plus de pages |
+
+Chaque carte liste les mêmes lignes (`FEATURES`) : ✅ en gras ce qui est inclus, 🚫 grisé
+ce qui ne l'est pas. L'annuel vaut 10 mois (« 2 mois offerts ») ; le prix de lancement ne
+s'applique qu'au mensuel.
 
 **Sans offre, rien n'est visible** : la page résultat ne montre qu'un cadenas et l'offre.
 

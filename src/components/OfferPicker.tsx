@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { BEST_VALUE, OFFERS } from "@/lib/plans";
+import { BEST_VALUE, OFFERS, type Billing } from "@/lib/plans";
 import type { PlanOffer } from "@/lib/plans";
-import { OfferCard } from "./PricingCards";
+import { BillingToggle, OfferCard } from "./PricingCards";
 
 /**
  * After a generation: the one offer that fits the plan, and the others only
@@ -21,6 +21,7 @@ export function OfferPicker({
   initiallyOpen?: boolean;
 }) {
   const [open, setOpen] = useState(initiallyOpen);
+  const [billing, setBilling] = useState<Billing>("monthly");
   const recommended = OFFERS.find((o) => o.id === recommendedId)!;
   const others = OFFERS.filter((o) => o.id !== recommendedId);
 
@@ -28,8 +29,12 @@ export function OfferPicker({
     <div>
       <div className="mx-auto max-w-md">
         <p className="mb-5 text-center text-[14px] leading-relaxed text-ink-300">{reason}</p>
+        <div className="mb-8">
+          <BillingToggle value={billing} onChange={setBilling} />
+        </div>
         <OfferCard
           offer={recommended}
+          billing={billing}
           promo={promo}
           featured
           badge={recommended.id === BEST_VALUE ? "Recommandé pour ton plan · le plus avantageux" : "Recommandé pour ton plan"}
@@ -52,6 +57,7 @@ export function OfferPicker({
             <OfferCard
               key={o.id}
               offer={o}
+              billing={billing}
               promo={promo}
               badge={o.id === BEST_VALUE ? "Le plus avantageux" : undefined}
             />

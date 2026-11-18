@@ -7,6 +7,7 @@ import { formatPrice, recommendedOffer } from "@/lib/plans";
 import { computeProfile, euros } from "@/lib/profile";
 import type { Answers } from "@/lib/questions";
 import { LogoMark } from "./Logo";
+import { FeatureList } from "./PricingCards";
 import { PromoCountdown } from "./PromoCountdown";
 import { LockIcon, cx } from "./ui";
 
@@ -287,14 +288,7 @@ export function GenerationScreen({
                 >
                   Découvrir les autres offres
                 </Link>
-                <ul className="mt-4 space-y-1.5 border-t border-white/10 pt-4">
-                  {recommended.offer.perks.map((perk) => (
-                    <li key={perk} className="flex gap-2 text-[13px] leading-snug text-ink-200">
-                      <span className="text-brand-400">✓</span>
-                      {perk}
-                    </li>
-                  ))}
-                </ul>
+                <FeatureList offer={recommended.offer} className="mt-4 border-t border-white/10 pt-4" />
               </div>
 
             </div>
