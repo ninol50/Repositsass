@@ -68,31 +68,24 @@ Les comptes réglés sur l'ancienne offre « elite » sont lus comme Pro.
 
 ## Les 5 business (`src/lib/businesses.ts`)
 
-**À remplir.** Les 5 emplacements existent, avec des contenus « à rédiger ». Pour
-chaque business : nom, accroche, description, étapes, et trois chiffres qui
-pilotent le classement :
+| # | Business | Offre | Temps mini | Revenu réaliste | Budget | Âge |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Clipping | Starter et Pro | 1 h / jour | 300 – 1 500 € | 0 € | 16 |
+| 2 | Création d'ebook (vente via TikTok) | Pro | 1 h / jour | 300 – 3 000 € | 0 € | 18 |
+| 3 | Achat-revente sur Vinted (grossistes) | Pro | 2 h / jour | 500 – 3 000 € | 200 € | 18 |
+| 4 | Création de sites web (prompts Claude, prospection au téléphone) | Pro | 3 h / jour | 1 000 – 6 000 € | 20 € | 18 |
+| 5 | Rémunération TikTok (chauffe du compte, montage, niche) | Pro | 2 h / jour | 100 – 2 000 € | 0 € | 18 |
 
-- `minHoursPerDay` : en dessous, le business est pénalisé ;
-- `revenueRange` : un objectif au-dessus du maximum est pénalisé ;
-- `minAge` : 18 si le business demande un statut ou des paiements à son nom.
+Chaque business a son guide pas à pas (`steps`, la méthode sans automatisation) et un
+statut d'automatisation (`automation.available`) : **toutes sont « bientôt
+disponibles »** pour l'instant. Passer `available` à `true` suffit à l'afficher comme
+disponible.
 
-Rien d'autre dans l'application n'a besoin de changer.
+Starter ouvre toujours le Clipping (`rankForPlan`), quel que soit le profil. Pro ouvre les
+5, classés par compatibilité : temps, objectif, âge, expérience (`rankBusinesses`).
 
-**Un business verrouillé ne quitte jamais le serveur.** La carte verrouillée ne reçoit
-que son rang et son score : ni le nom ni le contenu ne sont dans le HTML ni dans la
-charge utile React. Le flou n'est que le signal visuel.
-
-## Connexion : email + mot de passe, retenus par le téléphone
-
-Pas de « mot de passe oublié » à gérer : le formulaire est construit pour que le
-gestionnaire de mots de passe fasse le travail.
-
-- Inscription : `autocomplete="new-password"` + `passwordrules` → l'iPhone (trousseau
-  iCloud) et Chrome proposent un mot de passe fort conforme aux règles, et l'enregistrent.
-- Connexion : `autocomplete="current-password"` → ils le remplissent tout seuls.
-- Chrome/Android : `navigator.credentials.store()` après une connexion réussie pour
-  demander explicitement l'enregistrement.
-- Session de 30 jours : on reste connecté sans rien retaper.
+**Les business ne quittent jamais le serveur tant qu'ils sont verrouillés** : la carte
+verrouillée ne reçoit que son rang et son score, ni le nom ni le contenu.
 
 ## Ajouter une question
 
