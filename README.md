@@ -31,9 +31,9 @@ Un visiteur déjà connecté passe la pause sans s'arrêter.
 
 | | Starter | Pro |
 | --- | --- | --- |
-| Prix | 26 € / mois | 45 € / mois |
-| Prix de lancement (1er mois, 5 min après le questionnaire) | 22 € | 39,99 € |
-| Annuel (sélecteur, mensuel par défaut) | 260 € / an | 450 € / an |
+| Prix | 23 € / mois | 42 € / mois |
+| Prix de lancement (1er mois, 5 min après le questionnaire) | 17,99 € | 34,99 € |
+| Annuel (sélecteur, mensuel par défaut) | 230 € / an | 420 € / an |
 | Business | 1 : toujours le Clipping | tous |
 | Questionnaires | 1 (vérifié côté serveur) | illimités |
 | Automatisations | non | faites à ta place |

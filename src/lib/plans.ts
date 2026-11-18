@@ -37,9 +37,9 @@ export const OFFERS: PlanOffer[] = [
     id: "starter",
     name: "Starter",
     tagline: "Pour démarrer simplement, à ton rythme.",
-    monthlyPrice: 26,
-    launchPrice: 22,
-    yearlyPrice: 260,
+    monthlyPrice: 23,
+    launchPrice: 17.99,
+    yearlyPrice: 230,
     businessPlans: 1,
     questionnaires: 1,
     automations: false,
@@ -51,9 +51,9 @@ export const OFFERS: PlanOffer[] = [
     id: "pro",
     name: "Pro",
     tagline: "Tous les business, automatisés à ta place.",
-    monthlyPrice: 45,
-    launchPrice: 39.99,
-    yearlyPrice: 450,
+    monthlyPrice: 42,
+    launchPrice: 34.99,
+    yearlyPrice: 420,
     businessPlans: 5,
     questionnaires: null,
     automations: true,
@@ -148,7 +148,7 @@ export function promoActive(endsAt: Date, now = Date.now()): boolean {
   return endsAt.getTime() > now;
 }
 
-/** "39,99 €" / "26 €": cents only when there are some. */
+/** "34,99 €" / "23 €": cents only when there are some. */
 export function formatPrice(euros: number): string {
   const cents = !Number.isInteger(euros);
   return `${euros.toLocaleString("fr-FR", { minimumFractionDigits: cents ? 2 : 0, maximumFractionDigits: 2 })} €`;
