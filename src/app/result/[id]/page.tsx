@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { BusinessCard } from "@/components/BusinessCard";
 import { PricingCards } from "@/components/PricingCards";
+import { PromoCountdown } from "@/components/PromoCountdown";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ButtonLink, LockIcon } from "@/components/ui";
 import { currentUser } from "@/lib/auth";
 import { rankBusinesses } from "@/lib/businesses";
 import { getStore } from "@/lib/db";
-import { OFFERS, TOTAL_BUSINESSES, businessesUnlockedFor, planLabel } from "@/lib/plans";
+import { OFFERS, PROMO, TOTAL_BUSINESSES, businessesUnlockedFor, planLabel, promoActive, promoEndsAt } from "@/lib/plans";
 import { computeProfile, euros } from "@/lib/profile";
 import { effectivePlan } from "@/lib/types";
 
@@ -39,6 +40,10 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
   const unlocked = businessesUnlockedFor(plan);
   const ranked = rankBusinesses(a);
   const allLocked = unlocked === 0;
+  const endsAt = promoEndsAt(generation.createdAt);
+  // Launch offer: only for someone who has not bought yet, and only while
+  // the real deadline has not passed.
+  const promo = plan === "free" && promoActive(endsAt);
 
   const stats = [
     { label: "Heures de travail / mois", value: `${profile.hoursPerMonth} h`, note: `${a.hoursPerDay} h × 5 jours / semaine` },
@@ -57,9 +62,28 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
             Ton plan ScaleBiz est prêt
           </h1>
           <p className="mt-2 text-[14.5px] text-ink-400">
-            {a.age} ans · {a.hoursPerDay} h par jour · objectif {euros(a.monthlyTarget)} par mois
+            {a.age} ans
+            {a.experience !== undefined && <> · {a.experience === 0 ? "aucune expérience" : `${a.experience} an${a.experience > 1 ? "s" : ""} d'expérience`}</>}
+            {" "}· {a.hoursPerDay} h par jour · objectif {euros(a.monthlyTarget)} par mois
           </p>
         </header>
+
+        {promo && (
+          <a
+            href="#offres"
+            className="animate-alert mt-6 flex flex-col items-center gap-3 rounded-2xl px-5 py-4 text-center sm:flex-row sm:justify-between sm:text-left"
+          >
+            <span>
+              <span className="block font-display text-[18px] font-bold text-white sm:text-[20px]">
+                ⚠️ On a trouvé ton plan ‼️ Débloque-le avant de le perdre
+              </span>
+              <span className="text-[13.5px] text-ink-200">
+                -{PROMO.percentOff} % sur {PROMO.scope}, offre valable encore
+              </span>
+            </span>
+            <PromoCountdown endsAt={endsAt.toISOString()} className="font-mono text-[34px] font-bold tabular-nums text-white" />
+          </a>
+        )}
 
         {/* Free part: the computed profile. */}
         <section className="mt-8 grid gap-3 sm:grid-cols-3">
@@ -123,7 +147,7 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
               </p>
             </div>
             <div className="mt-10">
-              <PricingCards currentPlan={plan} />
+              <PricingCards currentPlan={plan} promo={promo} />
             </div>
           </section>
         )}

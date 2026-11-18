@@ -1,9 +1,13 @@
-import { OFFERS, TOTAL_BUSINESSES } from "@/lib/plans";
+import { OFFERS, PROMO, TOTAL_BUSINESSES, promoPrice } from "@/lib/plans";
 import type { Plan } from "@/lib/types";
 import { PlanButton } from "./PlanButton";
 import { CheckIcon, cx } from "./ui";
 
-export function PricingCards({ currentPlan }: { currentPlan?: Plan }) {
+/**
+ * `promo`: true only while the launch offer of a just-generated plan is still
+ * running (decided by the server, see PROMO in plans.ts).
+ */
+export function PricingCards({ currentPlan, promo = false }: { currentPlan?: Plan; promo?: boolean }) {
   return (
     <div className="grid gap-4 md:grid-cols-3">
       {OFFERS.map((offer) => (
@@ -25,10 +29,24 @@ export function PricingCards({ currentPlan }: { currentPlan?: Plan }) {
           <p className="font-display text-[18px] font-semibold text-white">{offer.name}</p>
           <p className="mt-1 text-[13px] text-ink-400">{offer.tagline}</p>
 
-          <p className="mt-5 flex items-baseline gap-1">
-            <span className="font-display text-[40px] font-bold tracking-tight text-white">{offer.monthlyPrice} €</span>
-            <span className="text-[14px] text-ink-400">/ mois</span>
-          </p>
+          {promo ? (
+            <div className="mt-5">
+              <p className="flex items-baseline gap-2">
+                <span className="font-display text-[40px] font-bold tracking-tight text-white">
+                  {promoPrice(offer.monthlyPrice).toLocaleString("fr-FR")} €
+                </span>
+                <span className="text-[16px] text-ink-500 line-through">{offer.monthlyPrice} €</span>
+              </p>
+              <p className="mt-1 text-[12.5px] font-medium text-gold-300">
+                -{PROMO.percentOff} % sur {PROMO.scope}, puis {offer.monthlyPrice} € / mois
+              </p>
+            </div>
+          ) : (
+            <p className="mt-5 flex items-baseline gap-1">
+              <span className="font-display text-[40px] font-bold tracking-tight text-white">{offer.monthlyPrice} €</span>
+              <span className="text-[14px] text-ink-400">/ mois</span>
+            </p>
+          )}
 
           <p className="mt-3 inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-ink-950/60 px-3 py-1 text-[12.5px] text-ink-200">
             <span className="font-semibold text-brand-300">

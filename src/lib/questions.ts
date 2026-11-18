@@ -12,6 +12,11 @@ import { z } from "zod";
 export type Answers = {
   /** Years. */
   age: number;
+  /**
+   * Years of business experience. Optional in the type only because plans
+   * generated before this question existed do not have it.
+   */
+  experience?: number;
   /** Hours the person is ready to work, per working day. */
   hoursPerDay: number;
   /** Net monthly income they aim for, in euros. */
@@ -23,6 +28,7 @@ export type QuestionId = keyof Answers;
 export type Question = {
   id: QuestionId;
   title: string;
+  /** Shown under the title. Empty = nothing shown. */
   hint: string;
   unit: string;
   min: number;
@@ -36,8 +42,8 @@ export type Question = {
 export const QUESTIONS: Question[] = [
   {
     id: "age",
-    title: "Quel âge as-tu ?",
-    hint: "Certains business demandent d'être majeur (statut, contrats, paiements).",
+    title: "Quel est ton âge ?",
+    hint: "",
     unit: "ans",
     min: 16,
     max: 99,
@@ -52,9 +58,26 @@ export const QUESTIONS: Question[] = [
     defaultValue: 22,
   },
   {
+    id: "experience",
+    title: "Quelle est ton expérience dans le business ?",
+    hint: "",
+    unit: "an(s)",
+    min: 0,
+    max: 50,
+    step: 1,
+    presets: [
+      { value: 0, label: "Aucune" },
+      { value: 1, label: "1 an" },
+      { value: 2, label: "2 ans" },
+      { value: 3, label: "3 ans" },
+      { value: 5, label: "5 ans et +" },
+    ],
+    defaultValue: 0,
+  },
+  {
     id: "hoursPerDay",
-    title: "Combien d'heures veux-tu travailler par jour ?",
-    hint: "Sois honnête : un business tenu 2 h par jour bat un plan à 8 h abandonné au bout d'une semaine.",
+    title: "Combien de temps as-tu à consacrer en moyenne dans une journée ?",
+    hint: "",
     unit: "h / jour",
     min: 1,
     max: 14,
@@ -70,8 +93,8 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: "monthlyTarget",
-    title: "Combien vises-tu par mois ?",
-    hint: "Ton objectif de revenu mensuel une fois le business lancé.",
+    title: "Quel est ton objectif avec ton plan business ?",
+    hint: "Ce que tu veux gagner chaque mois une fois lancé.",
     unit: "€ / mois",
     min: 100,
     max: 100000,
@@ -89,6 +112,13 @@ export const QUESTIONS: Question[] = [
 
 const bounds = Object.fromEntries(QUESTIONS.map((q) => [q.id, q])) as Record<QuestionId, Question>;
 
+/** Shown once the questions are done: required to generate. */
+export const CONSENT_TEXT =
+  "J'accepte que mes réponses soient filtrées pour mettre mon plan en place (30 secondes max).";
+
+/** The commitment sealed with the fingerprint. */
+export const OATH_TEXT = "Je jure de ne jamais lâcher mon business et de suivre le plan à la lettre.";
+
 function field(id: QuestionId) {
   const q = bounds[id];
   return z.coerce
@@ -100,6 +130,7 @@ function field(id: QuestionId) {
 
 export const answersSchema = z.object({
   age: field("age"),
+  experience: field("experience"),
   hoursPerDay: field("hoursPerDay"),
   monthlyTarget: field("monthlyTarget"),
 });

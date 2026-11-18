@@ -69,7 +69,7 @@ export default async function DashboardPage() {
             <div className="surface-flat mt-4 px-6 py-14 text-center">
               <p className="text-[15px] font-medium text-white">Aucun plan pour l&apos;instant</p>
               <p className="mx-auto mt-2 max-w-sm text-[13.5px] text-ink-400">
-                Réponds aux 3 questions pour générer ton premier plan.
+                Réponds aux 4 questions pour générer ton premier plan.
               </p>
               <div className="mt-5">
                 <ButtonLink href="/#questionnaire" variant="brand" size="sm">

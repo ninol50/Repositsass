@@ -64,6 +64,37 @@ export const OFFERS: PlanOffer[] = [
 
 export const TOTAL_BUSINESSES = 5;
 
+/**
+ * Launch offer shown right after a generation.
+ *
+ * The countdown is REAL: it ends `minutes` after the plan was generated, as
+ * computed by the server from the generation's creation date. Refreshing
+ * does not restart it, and once it is over the discount is gone. A timer
+ * that lies (restarts, or never really ends) is a misleading commercial
+ * practice under French/EU consumer law — keep it honest.
+ *
+ * When payment is wired, the checkout MUST apply `percentOff` only while
+ * `promoActive(...)` is true.
+ */
+export const PROMO = {
+  percentOff: 30,
+  minutes: 5,
+  /** What the discount applies to, shown next to the price. */
+  scope: "le premier mois",
+};
+
+export function promoEndsAt(generationCreatedAt: string | Date): Date {
+  return new Date(new Date(generationCreatedAt).getTime() + PROMO.minutes * 60_000);
+}
+
+export function promoActive(endsAt: Date, now = Date.now()): boolean {
+  return endsAt.getTime() > now;
+}
+
+export function promoPrice(monthlyPrice: number): number {
+  return Math.round(monthlyPrice * (100 - PROMO.percentOff)) / 100;
+}
+
 export function offerFor(plan: Plan): PlanOffer | null {
   return OFFERS.find((o) => o.id === plan) ?? null;
 }

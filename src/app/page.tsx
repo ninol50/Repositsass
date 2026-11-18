@@ -1,3 +1,4 @@
+import { ClockIcon } from "@/components/ClockIcon";
 import { Onboarding } from "@/components/Onboarding";
 import { PricingCards } from "@/components/PricingCards";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -10,8 +11,8 @@ export const dynamic = "force-dynamic";
 const STEPS = [
   {
     n: "01",
-    title: "Tu réponds à 3 questions",
-    text: "Ton âge, le temps que tu veux y mettre chaque jour, et ce que tu vises par mois. 30 secondes.",
+    title: "Tu réponds à 4 questions",
+    text: "Ton âge, ton expérience, le temps que tu as chaque jour et ton objectif. 30 secondes.",
   },
   {
     n: "02",
@@ -37,37 +38,26 @@ export default async function HomePage() {
       <main>
         <section className="relative">
           <div className="grid-lines pointer-events-none absolute inset-0 -z-10" />
-          <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-5 pt-12 pb-16 sm:pt-16 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:pt-24 lg:pb-24">
+          <div className="mx-auto w-full max-w-3xl px-5 pt-12 pb-16 text-center sm:pt-16 lg:pt-20 lg:pb-24">
             <div className="animate-rise">
-              <span className="inline-flex items-center gap-2 rounded-full border border-brand-400/25 bg-brand-500/10 px-3 py-1 text-[12.5px] text-brand-200">
-                <span className="h-1.5 w-1.5 rounded-full bg-brand-400 animate-pulse-ring" />
-                3 questions · 30 secondes
-              </span>
-              <h1 className="mt-5 font-display text-[40px] font-bold leading-[1.04] tracking-tight text-white sm:text-[56px]">
-                Trouve le business <span className="text-gradient">fait pour toi.</span>
+              <div className="flex justify-center">
+                <ClockIcon size={72} />
+              </div>
+              <h1 className="mt-5 font-display text-[38px] font-bold leading-[1.05] tracking-tight text-white sm:text-[54px]">
+                Trouve et crée ton business en{" "}
+                <span className="text-gradient">30 secondes chrono</span>
               </h1>
-              <p className="mt-5 max-w-lg text-[16px] leading-relaxed text-ink-300 sm:text-[17px]">
-                Dis-nous combien de temps tu as et combien tu veux gagner. ScaleBiz calcule ce qu&apos;il te
-                faut et te propose 5 business classés selon ton profil.
+              <p className="mx-auto mt-5 max-w-xl text-[16px] leading-relaxed text-ink-300 sm:text-[17px]">
+                Réponds à ce questionnaire hyper simple : il va nous permettre d&apos;analyser tes réponses et
+                de construire pas à pas ton business.
               </p>
-
-              <ul className="mt-8 hidden space-y-3 lg:block">
-                {["Aucune carte bancaire pour commencer", "Résultat chiffré à partir de tes réponses", "Ton plan reste enregistré dans ton espace"].map(
-                  (t) => (
-                    <li key={t} className="flex items-center gap-3 text-[14px] text-ink-300">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-500/15 text-brand-300">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                          <path d="M20 6 9 17l-5-5" />
-                        </svg>
-                      </span>
-                      {t}
-                    </li>
-                  ),
-                )}
-              </ul>
             </div>
 
-            <div id="questionnaire" className="animate-rise scroll-mt-24" style={{ animationDelay: "80ms" }}>
+            <div
+              id="questionnaire"
+              className="animate-rise mx-auto mt-10 max-w-xl scroll-mt-24 text-left"
+              style={{ animationDelay: "80ms" }}
+            >
               <Onboarding signedIn={Boolean(user)} />
             </div>
           </div>

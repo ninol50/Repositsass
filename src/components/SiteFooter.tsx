@@ -9,7 +9,7 @@ export function SiteFooter() {
           <div className="lg:col-span-2">
             <Logo />
             <p className="mt-4 max-w-xs text-[13.5px] leading-relaxed text-ink-400">
-              Trois questions, cinq business classés selon ton temps et ton objectif.
+              Quatre questions, cinq business classés selon ton profil et ton objectif.
               Trouve celui qui est fait pour toi, puis fais-le grandir.
             </p>
           </div>

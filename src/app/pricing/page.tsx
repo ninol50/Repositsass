@@ -33,7 +33,7 @@ export default async function PricingPage() {
             <p className="text-[14px] text-ink-400">Pas encore fait le questionnaire ?</p>
             <div className="mt-3">
               <ButtonLink href="/#questionnaire" variant="outline">
-                Répondre aux 3 questions
+                Répondre aux 4 questions
               </ButtonLink>
             </div>
           </div>

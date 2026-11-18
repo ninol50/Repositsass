@@ -1,43 +1,39 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { QUESTIONS, questionError, type Answers, type QuestionId } from "@/lib/questions";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { CONSENT_TEXT, OATH_TEXT, QUESTIONS, questionError, type Answers, type QuestionId } from "@/lib/questions";
 import { AuthForm } from "./AuthForm";
-import { Alert, LockIcon, cx } from "./ui";
+import { Fingerprint } from "./Fingerprint";
+import { GenerationScreen, type ScreenPhase } from "./GenerationScreen";
+import { CheckIcon, cx } from "./ui";
 
 /**
- * The whole first visit: three questions, then a generation that stops at the
- * account wall, then the real generation once the account exists.
+ * The whole first visit:
+ *   questions → consent → fingerprint oath → full-screen generation
+ *   → account wall (paused) → generation resumes → plan found, locked.
  *
- * Answers live in sessionStorage so a refresh — or a detour through the login
- * page — never makes the visitor start over.
+ * Progress lives in sessionStorage so a refresh never makes the visitor
+ * start over.
  */
 
-const STORAGE_KEY = "scalebiz:onboarding";
+const STORAGE_KEY = "scalebiz:onboarding:v2";
 
-type Phase = "questions" | "generating" | "locked" | "finishing";
+type Phase = "questions" | "consent" | "oath" | ScreenPhase;
 
-/** Where the progress bar freezes when the account wall appears. */
-const LOCK_AT = 64;
+/** Where the generation pauses for the account wall. */
+const PAUSE_AT = 62;
 
-const STATUS = [
-  { at: 0, text: "Analyse de ton profil…" },
-  { at: 18, text: "Calcul de ton taux horaire cible…" },
-  { at: 38, text: "Comparaison avec les 5 business ScaleBiz…" },
-  { at: 56, text: "Classement selon ton temps et ton objectif…" },
-  { at: LOCK_AT, text: "Génération en pause" },
-  { at: 80, text: "Préparation de ton plan…" },
-  { at: 96, text: "C'est prêt." },
-];
+type Result = { id: string; promoEndsAt: string };
 
-function statusFor(progress: number) {
-  let current = STATUS[0].text;
-  for (const s of STATUS) if (progress >= s.at) current = s.text;
-  return current;
-}
-
-type Saved = { values: Partial<Record<QuestionId, number>>; step: number; phase: Phase };
+type Saved = {
+  values: Partial<Record<QuestionId, number>>;
+  step: number;
+  phase: Phase;
+  consent: boolean;
+  oath: boolean;
+  result: Result | null;
+};
 
 function readSaved(): Saved | null {
   try {
@@ -64,13 +60,18 @@ function clearSaved() {
   }
 }
 
+const SCREEN_PHASES: Phase[] = ["working", "auth", "finishing", "locked"];
+
 export function Onboarding({ signedIn }: { signedIn: boolean }) {
   const router = useRouter();
   const [values, setValues] = useState<Partial<Record<QuestionId, number>>>({});
   const [draft, setDraft] = useState<string>(String(QUESTIONS[0].defaultValue));
   const [step, setStep] = useState(0);
   const [phase, setPhase] = useState<Phase>("questions");
+  const [consent, setConsent] = useState(false);
+  const [oath, setOath] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [result, setResult] = useState<Result | null>(null);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [authMode, setAuthMode] = useState<"signup" | "login">("signup");
@@ -79,85 +80,99 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
 
   const question = QUESTIONS[step];
 
-  /* Restore an interrupted session once, on mount. */
+  /* Restore an interrupted visit once, on mount. */
   useEffect(() => {
     if (restored.current) return;
     restored.current = true;
     const saved = readSaved();
     if (!saved) return;
     setValues(saved.values);
+    setConsent(saved.consent);
+    setOath(saved.oath);
     const s = Math.min(saved.step, QUESTIONS.length - 1);
     setStep(s);
     setDraft(String(saved.values[QUESTIONS[s].id] ?? QUESTIONS[s].defaultValue));
-    if (saved.phase === "locked" || saved.phase === "generating" || saved.phase === "finishing") {
-      // Coming back to a paused generation: resume where it stopped.
-      setProgress(LOCK_AT);
-      setPhase(signedIn ? "finishing" : "locked");
+
+    if (saved.result) {
+      setResult(saved.result);
+      setProgress(100);
+      setPhase("locked");
+    } else if (SCREEN_PHASES.includes(saved.phase)) {
+      setProgress(PAUSE_AT);
+      setPhase(signedIn ? "finishing" : "auth");
+    } else {
+      setPhase(saved.phase);
     }
   }, [signedIn]);
+
+  const save = useCallback(
+    (patch: Partial<Saved>) =>
+      writeSaved({ values, step, phase, consent, oath, result, ...patch }),
+    [values, step, phase, consent, oath, result],
+  );
 
   useEffect(() => {
     if (phase === "questions") inputRef.current?.focus();
   }, [phase, step]);
 
-  /* Phase 1: fake-but-honest progress up to the wall. */
+  /* 1. Working up to the account wall. */
   useEffect(() => {
-    if (phase !== "generating") return;
+    if (phase !== "working") return;
     const id = window.setInterval(() => {
-      setProgress((p) => Math.min(LOCK_AT, p + 1 + Math.random() * 2.2));
-    }, 70);
+      setProgress((p) => Math.min(PAUSE_AT, p + 0.6 + Math.random() * 1.1));
+    }, 90);
     return () => window.clearInterval(id);
   }, [phase]);
 
-  /* Reaching the wall: lock, or go straight through when already signed in. */
   useEffect(() => {
-    if (phase !== "generating" || progress < LOCK_AT) return;
-    const id = window.setTimeout(() => setPhase(signedIn ? "finishing" : "locked"), 450);
+    if (phase !== "working" || progress < PAUSE_AT) return;
+    const id = window.setTimeout(() => setPhase(signedIn ? "finishing" : "auth"), 700);
     return () => window.clearTimeout(id);
   }, [phase, progress, signedIn]);
 
   useEffect(() => {
-    if (phase === "locked") writeSaved({ values, step, phase: "locked" });
-  }, [phase, values, step]);
+    if (phase === "auth") save({ phase: "auth" });
+  }, [phase, save]);
 
-  /* Phase 2: the real generation, once an account exists. */
+  /* 2. The real generation, once an account exists. */
   useEffect(() => {
     if (phase !== "finishing") return;
     let cancelled = false;
-
-    const tick = window.setInterval(() => {
-      setProgress((p) => Math.min(94, p + 1.5));
-    }, 45);
+    const tick = window.setInterval(() => setProgress((p) => Math.min(97, p + 0.9)), 70);
 
     (async () => {
       try {
         const res = await fetch("/api/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ answers: values }),
+          body: JSON.stringify({ answers: values, consent: true }),
         });
-        const data = (await res.json().catch(() => ({}))) as { id?: string; error?: string };
+        const data = (await res.json().catch(() => ({}))) as Partial<Result> & { error?: string };
         if (cancelled) return;
 
         if (res.status === 401) {
           window.clearInterval(tick);
-          setProgress(LOCK_AT);
-          setPhase("locked");
+          setProgress(PAUSE_AT);
+          setPhase("auth");
           return;
         }
-        if (!res.ok || !data.id) {
+        if (!res.ok || !data.id || !data.promoEndsAt) {
           window.clearInterval(tick);
           setApiError(data.error ?? "La génération a échoué. Réessaie.");
           return;
         }
 
-        // Let the bar visibly finish before leaving.
-        await new Promise((r) => window.setTimeout(r, 650));
+        // Let the log run to the end before revealing the result.
+        await new Promise((r) => window.setTimeout(r, 2600));
+        if (cancelled) return;
         window.clearInterval(tick);
         setProgress(100);
-        clearSaved();
-        await new Promise((r) => window.setTimeout(r, 350));
-        router.push(`/result/${data.id}`);
+        const found = { id: data.id, promoEndsAt: data.promoEndsAt };
+        setResult(found);
+        await new Promise((r) => window.setTimeout(r, 900));
+        if (cancelled) return;
+        setPhase("locked");
+        writeSaved({ values, step, phase: "locked", consent, oath, result: found });
         router.refresh();
       } catch {
         window.clearInterval(tick);
@@ -169,7 +184,10 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
       cancelled = true;
       window.clearInterval(tick);
     };
-  }, [phase, values, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
+  /* ----------------------------- actions ----------------------------- */
 
   function commit(raw: string): number | null {
     const cleaned = raw.replace(/\s/g, "").replace(",", ".");
@@ -179,11 +197,10 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
     return err ? null : n;
   }
 
-  function next(e?: React.FormEvent) {
+  function nextQuestion(e?: React.FormEvent) {
     e?.preventDefault();
     const n = commit(draft);
     if (n === null) return;
-
     const updated = { ...values, [question.id]: n };
     setValues(updated);
 
@@ -191,144 +208,183 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
       const s = step + 1;
       setStep(s);
       setDraft(String(updated[QUESTIONS[s].id] ?? QUESTIONS[s].defaultValue));
-      writeSaved({ values: updated, step: s, phase: "questions" });
+      writeSaved({ values: updated, step: s, phase: "questions", consent, oath, result: null });
       return;
     }
-
-    setProgress(0);
-    setApiError(null);
-    setPhase("generating");
-    writeSaved({ values: updated, step, phase: "generating" });
+    setPhase("consent");
+    writeSaved({ values: updated, step, phase: "consent", consent, oath, result: null });
   }
 
   function back() {
+    setFieldError(null);
+    if (phase === "oath") return setPhase("consent");
+    if (phase === "consent") return setPhase("questions");
     if (step === 0) return;
     const s = step - 1;
     setStep(s);
-    setFieldError(null);
     setDraft(String(values[QUESTIONS[s].id] ?? QUESTIONS[s].defaultValue));
   }
 
   function nudge(delta: number) {
-    const current = Number(draft.replace(/\s/g, "")) || question.defaultValue;
-    const n = Math.min(question.max, Math.max(question.min, current + delta * question.step));
+    const current = Number(draft.replace(/\s/g, ""));
+    const base = Number.isFinite(current) ? current : question.defaultValue;
+    const n = Math.min(question.max, Math.max(question.min, base + delta * question.step));
     setDraft(String(n));
     setFieldError(null);
   }
 
-  /* ----------------------------- render ----------------------------- */
+  function launch() {
+    setProgress(0);
+    setApiError(null);
+    setResult(null);
+    setPhase("working");
+    writeSaved({ values, step, phase: "working", consent, oath, result: null });
+  }
 
-  if (phase !== "questions") {
-    const answers = values as Answers;
-    const locked = phase === "locked";
+  /* ----------------------------- render ------------------------------ */
+
+  if (SCREEN_PHASES.includes(phase)) {
     return (
-      <div className="surface relative overflow-hidden p-6 sm:p-8">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-[12px] font-medium uppercase tracking-[0.18em] text-brand-300">
-            {locked ? "Génération en pause" : "Génération en cours"}
-          </p>
-          <p className="font-mono text-[13px] text-ink-300">{Math.round(progress)}%</p>
-        </div>
+      <GenerationScreen
+        phase={phase as ScreenPhase}
+        progress={progress}
+        answers={values as Answers}
+        result={result}
+        error={apiError}
+        onRetry={() => {
+          setApiError(null);
+          setPhase("finishing");
+        }}
+        onLeave={clearSaved}
+        auth={
+          <AuthForm
+            key={authMode}
+            mode={authMode}
+            submitLabel={authMode === "signup" ? "Créer mon compte et continuer" : "Me connecter et continuer"}
+            onSwitchMode={() => setAuthMode((m) => (m === "signup" ? "login" : "signup"))}
+            onSuccess={() => setPhase("finishing")}
+          />
+        }
+      />
+    );
+  }
 
-        <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
-          <div
+  const backButton = (
+    <button
+      type="button"
+      onClick={back}
+      className={cx(
+        "rounded-xl px-2 py-3 text-[14px] text-ink-400 hover:text-white",
+        phase === "questions" && step === 0 && "invisible",
+      )}
+    >
+      ← Retour
+    </button>
+  );
+
+  if (phase === "consent") {
+    return (
+      <div className="surface relative p-6 sm:p-8">
+        <span className="absolute right-5 top-5 rounded-full border border-gold-400/30 bg-gold-400/10 px-3 py-1 text-[12px] font-medium text-gold-300">
+          Plus que 2 étapes 🔥
+        </span>
+        <h2 className="max-w-[80%] font-display text-[24px] font-semibold leading-tight tracking-tight text-white sm:text-[28px]">
+          Avant de construire ton plan
+        </h2>
+
+        <label
+          className={cx(
+            "mt-7 flex cursor-pointer items-start gap-4 rounded-2xl border p-5 transition-colors",
+            consent ? "border-brand-400/60 bg-brand-500/10" : "border-white/10 bg-white/[0.02] hover:border-white/25",
+          )}
+        >
+          <input
+            type="checkbox"
+            checked={consent}
+            onChange={(e) => {
+              setConsent(e.target.checked);
+              save({ consent: e.target.checked });
+            }}
+            className="peer sr-only"
+          />
+          <span
             className={cx(
-              "h-full rounded-full transition-[width] duration-200 ease-out",
-              locked
-                ? "bg-[linear-gradient(90deg,#10b981,#fbbf24)]"
-                : "animate-shimmer bg-[linear-gradient(90deg,#10b981,#6ee7b7,#10b981)]",
+              "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border-2 transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-brand-400",
+              consent ? "border-brand-400 bg-brand-400 text-ink-950" : "border-white/25 text-transparent",
             )}
-            style={{ width: `${progress}%` }}
+            aria-hidden
+          >
+            <CheckIcon size={18} />
+          </span>
+          <span className="text-[16px] leading-relaxed text-ink-100 sm:text-[17px]">{CONSENT_TEXT}</span>
+        </label>
+
+        <div className="mt-8 flex items-center justify-between gap-3">
+          {backButton}
+          <button
+            type="button"
+            disabled={!consent}
+            onClick={() => {
+              setPhase("oath");
+              save({ phase: "oath" });
+            }}
+            className="h-12 rounded-xl bg-[linear-gradient(120deg,#34d399,#10b981)] px-6 text-[15px] font-semibold text-ink-950 transition-all hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Continuer →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === "oath") {
+    return (
+      <div className="surface relative p-6 sm:p-8">
+        <span className="absolute right-5 top-5 rounded-full border border-gold-400/30 bg-gold-400/10 px-3 py-1 text-[12px] font-medium text-gold-300">
+          Dernière étape
+        </span>
+        <h2 className="max-w-[75%] font-display text-[24px] font-semibold leading-tight tracking-tight text-white sm:text-[28px]">
+          Ton engagement
+        </h2>
+        <p className="mt-4 text-center font-display text-[19px] font-semibold leading-snug text-white sm:text-[21px]">
+          « {OATH_TEXT} »
+        </p>
+
+        <div className="mt-7">
+          <Fingerprint
+            done={oath}
+            onDone={() => {
+              setOath(true);
+              save({ oath: true });
+            }}
           />
         </div>
 
-        <p className="mt-3 text-[14px] text-ink-300" aria-live="polite">
-          {statusFor(progress)}
-        </p>
-
-        <dl className="mt-6 grid grid-cols-3 gap-2 text-center">
-          {[
-            { label: "Âge", value: `${answers.age} ans` },
-            { label: "Par jour", value: `${answers.hoursPerDay} h` },
-            { label: "Objectif", value: `${(answers.monthlyTarget ?? 0).toLocaleString("fr-FR")} €` },
-          ].map((s) => (
-            <div key={s.label} className="rounded-xl border border-white/[0.07] bg-ink-950/60 px-2 py-3">
-              <dt className="text-[11.5px] text-ink-500">{s.label}</dt>
-              <dd className="mt-0.5 font-display text-[15px] font-semibold text-white">{s.value}</dd>
-            </div>
-          ))}
-        </dl>
-
-        {locked && (
-          <div className="animate-rise mt-7 border-t border-white/[0.08] pt-7">
-            <div className="flex items-start gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gold-400/30 bg-gold-400/10 text-gold-300">
-                <LockIcon size={18} />
-              </span>
-              <div>
-                <h2 className="font-display text-[20px] font-semibold tracking-tight text-white">
-                  {authMode === "signup" ? "Crée ton compte pour finir la génération" : "Connecte-toi pour finir la génération"}
-                </h2>
-                <p className="mt-1 text-[13.5px] leading-relaxed text-ink-400">
-                  Tes réponses sont gardées. Ton plan sera enregistré dans ton espace, tu pourras y revenir
-                  quand tu veux.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <AuthForm
-                key={authMode}
-                mode={authMode}
-                submitLabel={authMode === "signup" ? "Créer mon compte et continuer" : "Me connecter et continuer"}
-                onSwitchMode={() => setAuthMode((m) => (m === "signup" ? "login" : "signup"))}
-                onSuccess={() => setPhase("finishing")}
-              />
-            </div>
-          </div>
-        )}
-
-        {apiError && (
-          <div className="mt-6 space-y-3">
-            <Alert tone="error">{apiError}</Alert>
-            <button
-              type="button"
-              onClick={() => {
-                setApiError(null);
-                setPhase("generating");
-                setProgress(LOCK_AT - 1);
-              }}
-              className="text-[13.5px] text-brand-300 underline underline-offset-4"
-            >
-              Relancer la génération
-            </button>
-          </div>
-        )}
+        <div className="mt-8 flex items-center justify-between gap-3">
+          {backButton}
+          <button
+            type="button"
+            disabled={!oath}
+            onClick={launch}
+            className="h-12 rounded-xl bg-[linear-gradient(120deg,#34d399,#10b981)] px-5 text-[15px] font-bold text-ink-950 transition-all hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 sm:px-6"
+          >
+            Créer mon business de A à Z →
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <form onSubmit={next} className="surface p-6 sm:p-8" noValidate>
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-[12px] font-medium uppercase tracking-[0.18em] text-brand-300">
-          Question {step + 1} / {QUESTIONS.length}
-        </p>
-        <div className="flex gap-1.5" aria-hidden>
-          {QUESTIONS.map((q, i) => (
-            <span
-              key={q.id}
-              className={cx("h-1.5 w-8 rounded-full transition-colors", i <= step ? "bg-brand-400" : "bg-white/10")}
-            />
-          ))}
-        </div>
-      </div>
-
+    <form onSubmit={nextQuestion} className="surface p-6 sm:p-8" noValidate>
       <div key={question.id} className="animate-rise">
-        <label htmlFor="answer" className="mt-5 block font-display text-[24px] font-semibold leading-tight tracking-tight text-white sm:text-[28px]">
+        <label
+          htmlFor="answer"
+          className="block font-display text-[24px] font-semibold leading-tight tracking-tight text-white sm:text-[28px]"
+        >
           {question.title}
         </label>
-        <p className="mt-2 text-[13.5px] leading-relaxed text-ink-400">{question.hint}</p>
+        {question.hint && <p className="mt-2 text-[13.5px] leading-relaxed text-ink-400">{question.hint}</p>}
 
         <div className="mt-6 flex items-stretch gap-2">
           <button
@@ -400,19 +456,12 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
       </div>
 
       <div className="mt-8 flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={back}
-          disabled={step === 0}
-          className="rounded-xl px-4 py-3 text-[14px] text-ink-400 hover:text-white disabled:invisible"
-        >
-          ← Retour
-        </button>
+        {backButton}
         <button
           type="submit"
           className="h-12 rounded-xl bg-[linear-gradient(120deg,#34d399,#10b981)] px-6 text-[15px] font-semibold text-ink-950 transition-all hover:brightness-110 active:scale-[0.99]"
         >
-          {step < QUESTIONS.length - 1 ? "Continuer →" : "Générer mon business →"}
+          Continuer →
         </button>
       </div>
     </form>

@@ -25,6 +25,8 @@ export type Business = {
   startBudget: number;
   /** 18 when it needs a legal status, contracts or payouts in your own name. */
   minAge: number;
+  /** Years of business experience it realistically needs. 0 = beginner-friendly. */
+  minExperience: number;
   /** Launch plan, in order. */
   steps: string[];
 };
@@ -38,6 +40,7 @@ export const BUSINESSES: Business[] = [1, 2, 3, 4, 5].map((n) => ({
   revenueRange: [500, 5000],
   startBudget: 0,
   minAge: 18,
+  minExperience: 0,
   steps: ["Étape 1 à rédiger", "Étape 2 à rédiger", "Étape 3 à rédiger"],
 }));
 
@@ -51,8 +54,8 @@ export type RankedBusiness = {
 /**
  * Scores each business against the answers, best first.
  *
- * Three criteria: is there enough time, can it reach the target, and is the
- * person old enough. Deterministic — same answers, same order.
+ * Four criteria: is there enough time, can it reach the target, is the
+ * person old enough, and do they have the experience it needs. Deterministic — same answers, same order.
  */
 export function rankBusinesses(a: Answers, list: Business[] = BUSINESSES): RankedBusiness[] {
   const profile = computeProfile(a);
@@ -75,6 +78,12 @@ export function rankBusinesses(a: Answers, list: Business[] = BUSINESSES): Ranke
     }
 
     if (!profile.isAdult && business.minAge >= 18) fit -= 30;
+
+    // Not experienced enough: moderate penalty, it can be learned.
+    const experience = a.experience ?? 0;
+    if (experience < business.minExperience) {
+      fit -= Math.min(25, (business.minExperience - experience) * 8);
+    }
 
     return { business, index, fit: Math.max(5, Math.round(fit)) };
   });
