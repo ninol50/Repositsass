@@ -8,7 +8,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ButtonLink, LockIcon } from "@/components/ui";
 import { currentUser } from "@/lib/auth";
-import { rankBusinesses } from "@/lib/businesses";
+import { rankForPlan } from "@/lib/businesses";
 import { getStore } from "@/lib/db";
 import {
   OFFERS,
@@ -120,7 +120,7 @@ export default async function ResultPage({
   /* ----------------------------- paying: the plan ----------------------------- */
   const profile = computeProfile(a);
   const unlocked = businessPlansFor(plan);
-  const ranked = rankBusinesses(a);
+  const ranked = rankForPlan(a, plan);
 
   const stats = [
     { label: "Heures de travail / mois", value: `${profile.hoursPerMonth} h`, note: `${a.hoursPerDay} h × 5 jours / semaine` },

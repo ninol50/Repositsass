@@ -128,3 +128,19 @@ export function rankBusinesses(a: Answers, list: Business[] = BUSINESSES): Ranke
   scored.sort((x, y) => y.fit - x.fit || x.index - y.index);
   return scored.map((s, i) => ({ business: s.business, rank: i + 1, fit: s.fit }));
 }
+
+/** The business every Starter plan opens, whatever the answers. */
+export const STARTER_BUSINESS_ID = "clipping";
+
+/**
+ * Ranking as shown to an account on `plan`. Starter always opens Clipping:
+ * it is moved to the top; the others keep their order behind it.
+ */
+export function rankForPlan(a: Answers, plan: string, list: Business[] = BUSINESSES): RankedBusiness[] {
+  const ranked = rankBusinesses(a, list);
+  if (plan !== "starter") return ranked;
+  const starter = ranked.find((r) => r.business.id === STARTER_BUSINESS_ID);
+  if (!starter) return ranked;
+  const rest = ranked.filter((r) => r !== starter);
+  return [starter, ...rest].map((r, i) => ({ ...r, rank: i + 1 }));
+}
