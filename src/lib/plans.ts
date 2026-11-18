@@ -1,81 +1,77 @@
 /**
- * What each plan actually unlocks.
+ * The offers, and what each one unlocks.
  *
- * Single source of truth: the paywall, the quota check, the depth of the
- * generated brief and the pricing page all read from here, so a plan can never
- * promise on one page what another page refuses.
+ * Single source of truth: the result page paywall, the pricing page and the
+ * admin all read from here. Changing a price or a perk is a one-line edit.
+ *
+ * Prices are placeholders until payment is wired.
  */
 
 import type { Plan } from "./types";
 
-export type PlanCapabilities = {
-  /** Briefs a month. null = no limit. */
-  monthlyGenerations: number | null;
-  /** Can any part of the generated document be read? */
-  canReadBrief: boolean;
-  /** How deep the generated document goes. */
-  briefDepth: "standard" | "pro";
-  /** Access to the proven-ideas catalogue. */
-  ideaCatalog: boolean;
-  /** One-click prefill of the questionnaire from a catalogue entry. */
-  autofill: boolean;
-  /** The step-by-step guide from brief to deployed site. */
-  guide: boolean;
+export type PlanOffer = {
+  id: Exclude<Plan, "free">;
+  name: string;
+  /** Euros per month. */
+  monthlyPrice: number;
+  tagline: string;
+  /** How many of the user's 5 businesses are unlocked, best matches first. */
+  businessesUnlocked: number;
+  /** Shown on the card. Keep it in sync with the capabilities below. */
+  perks: string[];
+  highlighted?: boolean;
 };
 
-export const CAPABILITIES: Record<Plan, PlanCapabilities> = {
-  free: {
-    // Generating stays possible so the visitor sees the flow and the real
-    // length of what they would get — but not a single line of its content.
-    monthlyGenerations: 5,
-    canReadBrief: false,
-    briefDepth: "standard",
-    ideaCatalog: false,
-    autofill: false,
-    guide: false,
+export const OFFERS: PlanOffer[] = [
+  {
+    id: "starter",
+    name: "Starter",
+    monthlyPrice: 19,
+    tagline: "Pour lancer ton premier business.",
+    businessesUnlocked: 1,
+    perks: [
+      "Ton business n°1, le plus adapté à ton profil",
+      "Le plan de lancement étape par étape",
+      "Ton objectif chiffré, mois par mois",
+    ],
   },
-  basic: {
-    monthlyGenerations: 10,
-    canReadBrief: true,
-    briefDepth: "standard",
-    ideaCatalog: false,
-    autofill: false,
-    guide: false,
+  {
+    id: "pro",
+    name: "Pro",
+    monthlyPrice: 39,
+    tagline: "Pour comparer et choisir le bon.",
+    businessesUnlocked: 3,
+    perks: [
+      "Tes 3 meilleurs business débloqués",
+      "Tout ce qui est dans Starter",
+      "Comparatif temps / revenu / budget de départ",
+    ],
+    highlighted: true,
   },
-  pro: {
-    monthlyGenerations: 30,
-    canReadBrief: true,
-    briefDepth: "pro",
-    ideaCatalog: true,
-    autofill: true,
-    guide: true,
+  {
+    id: "elite",
+    name: "Elite",
+    monthlyPrice: 79,
+    tagline: "Pour tout voir et aller vite.",
+    businessesUnlocked: 5,
+    perks: [
+      "Les 5 business débloqués",
+      "Tout ce qui est dans Pro",
+      "Accès en avant-première aux nouveautés",
+    ],
   },
-  max: {
-    monthlyGenerations: null,
-    canReadBrief: true,
-    briefDepth: "pro",
-    ideaCatalog: true,
-    autofill: true,
-    guide: true,
-  },
-};
+];
 
-/** Capabilities for a user, taking an expired subscription into account. */
-export function capabilitiesFor(plan: Plan, active: boolean): PlanCapabilities {
-  return CAPABILITIES[active ? plan : "free"] ?? CAPABILITIES.free;
+export const TOTAL_BUSINESSES = 5;
+
+export function offerFor(plan: Plan): PlanOffer | null {
+  return OFFERS.find((o) => o.id === plan) ?? null;
 }
 
-export function quotaLabel(limit: number | null): string {
-  return limit === null ? "illimité" : `${limit} par mois`;
+export function businessesUnlockedFor(plan: Plan): number {
+  return offerFor(plan)?.businessesUnlocked ?? 0;
 }
 
-/** Start of the current calendar month, in UTC — the quota window. */
-export function currentPeriodStart(now = new Date()): Date {
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-}
-
-/** Human-readable date the quota resets. */
-export function nextResetLabel(now = new Date()): string {
-  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
-  return next.toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
+export function planLabel(plan: Plan): string {
+  return offerFor(plan)?.name ?? "Gratuit";
 }

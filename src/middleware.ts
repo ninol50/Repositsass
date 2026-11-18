@@ -9,8 +9,8 @@ import { NextResponse, type NextRequest } from "next/server";
  * route handler re-checks the session server-side.
  */
 
-const PROTECTED = ["/dashboard", "/result", "/billing", "/admin", "/ideas", "/guide"];
-const SESSION_COOKIE = "rs_session";
+const PROTECTED = ["/dashboard", "/result", "/admin"];
+const SESSION_COOKIE = "sb_session";
 
 function secretKey(): Uint8Array | null {
   const raw = process.env.AUTH_SECRET;
@@ -33,7 +33,7 @@ export async function middleware(req: NextRequest) {
 
   if (token && key) {
     try {
-      await jwtVerify(token, key, { issuer: "repositsaas" });
+      await jwtVerify(token, key, { issuer: "scalebiz" });
       valid = true;
     } catch {
       valid = false;
@@ -49,5 +49,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/result/:path*", "/billing/:path*", "/admin/:path*", "/ideas/:path*", "/guide/:path*"],
+  matcher: ["/dashboard/:path*", "/result/:path*", "/admin/:path*"],
 };

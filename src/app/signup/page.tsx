@@ -8,13 +8,13 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Créer un compte",
-  description: "Crée ton compte RepositSaaS pour générer et retrouver tes briefs.",
+  description: "Crée ton compte ScaleBiz pour enregistrer ton plan.",
 };
 
 const POINTS = [
-  "Génère autant de briefs que tu veux",
-  "Retrouve-les dans ton espace, à tout moment",
-  "5 briefs par mois en gratuit, lecture débloquée par un plan",
+  "Ton plan enregistré dans ton espace",
+  "Refais le questionnaire autant de fois que tu veux",
+  "Aucune carte bancaire demandée",
 ];
 
 export default async function SignupPage({
@@ -24,7 +24,7 @@ export default async function SignupPage({
 }) {
   const { next } = await searchParams;
   const user = await currentUser();
-  const target = next && next.startsWith("/") ? next : "/brief";
+  const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
   if (user) redirect(target);
 
   return (

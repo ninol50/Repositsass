@@ -3,7 +3,7 @@ import { LegalPage, LegalSection, Placeholder } from "@/components/LegalPage";
 
 export const metadata: Metadata = {
   title: "Conditions d'utilisation",
-  description: "Les conditions d'utilisation du service RepositSaaS.",
+  description: "Les conditions d'utilisation du service ScaleBiz.",
 };
 
 export default function TermsPage() {
@@ -16,7 +16,7 @@ export default function TermsPage() {
 
       <LegalSection title="1. Éditeur du service">
         <p>
-          Le service RepositSaaS est édité par <Placeholder>[Raison sociale]</Placeholder>,{" "}
+          Le service ScaleBiz est édité par <Placeholder>[Raison sociale]</Placeholder>,{" "}
           <Placeholder>[forme juridique]</Placeholder>, immatriculée sous le numéro{" "}
           <Placeholder>[SIREN / numéro d&apos;immatriculation]</Placeholder>, dont le siège est situé{" "}
           <Placeholder>[adresse]</Placeholder>. Contact : <Placeholder>[email de contact]</Placeholder>.
@@ -25,10 +25,10 @@ export default function TermsPage() {
 
       <LegalSection title="2. Objet du service">
         <p>
-          RepositSaaS génère, à partir des réponses fournies par l&apos;utilisateur, un document de
-          spécification destiné à être utilisé avec un assistant de développement. Le service fournit un
-          document ; il ne fournit ni code fonctionnel, ni conseil juridique, ni conseil financier, ni
-          garantie de résultat commercial.
+          ScaleBiz propose, à partir des réponses fournies par l&apos;utilisateur (âge, temps disponible,
+          objectif de revenu), une sélection de modèles de business classés selon son profil, avec un plan
+          de lancement. Le service fournit de l&apos;information ; il ne fournit ni conseil juridique, ni
+          conseil financier, ni garantie de résultat commercial.
         </p>
       </LegalSection>
 
@@ -42,36 +42,34 @@ export default function TermsPage() {
 
       <LegalSection title="4. Accès payant">
         <p>
-          La génération est gratuite dans la limite du quota mensuel. L&apos;accès au contenu du document
-          nécessite un plan actif, payé via Whop. L&apos;accès est accordé après confirmation du paiement
-          par le prestataire. Les abonnements se renouvellent automatiquement jusqu&apos;à résiliation,
-          qui s&apos;effectue depuis ton compte Whop.
+          Le questionnaire et le profil chiffré sont gratuits. L&apos;accès au détail des business
+          nécessite une offre active (Starter, Pro ou Elite), facturée chaque mois. L&apos;accès est
+          accordé après confirmation du paiement par le prestataire. Les abonnements se renouvellent
+          automatiquement jusqu&apos;à résiliation.
         </p>
       </LegalSection>
 
       <LegalSection title="5. Propriété des contenus">
         <p>
-          Les idées et réponses que tu saisis restent ta propriété. Le document généré à partir de ces
-          réponses t&apos;appartient : tu peux l&apos;utiliser, le modifier et l&apos;exploiter
-          commercialement sans restriction. Le moteur de génération, l&apos;interface et la marque
-          RepositSaaS restent la propriété de l&apos;éditeur.
+          Les réponses que tu saisis restent ta propriété. Les contenus des business, le moteur de
+          classement, l&apos;interface et la marque ScaleBiz restent la propriété de l&apos;éditeur : tu peux
+          les utiliser pour lancer ton activité, pas les republier ni les revendre.
         </p>
       </LegalSection>
 
       <LegalSection title="6. Usages interdits">
         <p>
-          Sont interdits : la revente ou la redistribution automatisée des documents générés en tant que
-          service concurrent, l&apos;extraction automatisée du service, toute tentative de contournement
+          Sont interdits : la revente ou la redistribution des contenus débloqués, le partage d&apos;un
+          compte payant, l&apos;extraction automatisée du service, toute tentative de contournement
           du paiement, et l&apos;utilisation du service pour concevoir un produit illicite.
         </p>
       </LegalSection>
 
       <LegalSection title="7. Limitation de responsabilité">
         <p>
-          Le service est fourni « en l&apos;état ». Les estimations chiffrées produites (nombre de clients,
-          churn, LTV, CAC, trafic) reposent sur des moyennes de marché publiques et ne constituent pas une
-          prévision de tes résultats. L&apos;éditeur ne peut être tenu responsable des décisions
-          commerciales, techniques ou financières prises sur la base d&apos;un document généré.
+          Le service est fourni « en l&apos;état ». Les montants affichés (revenus, taux horaire, budget de
+          départ) sont des ordres de grandeur et ne constituent pas une prévision de tes résultats. L&apos;éditeur ne peut être tenu responsable des décisions
+          commerciales, techniques ou financières prises sur la base d&apos;un plan généré.
         </p>
         <p>
           Dans la limite autorisée par la loi, la responsabilité de l&apos;éditeur est plafonnée au montant

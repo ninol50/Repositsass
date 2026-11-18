@@ -64,16 +64,9 @@ export function MobileNav({
                 <Link
                   href="/dashboard"
                   onClick={() => setOpen(false)}
-                  className="rounded-xl border border-white/12 px-4 py-3.5 text-center text-[15px] text-white"
-                >
-                  Mes briefs
-                </Link>
-                <Link
-                  href="/brief"
-                  onClick={() => setOpen(false)}
                   className="rounded-xl bg-white px-4 py-3.5 text-center text-[15px] font-medium text-ink-950"
                 >
-                  Nouveau brief
+                  Mon espace
                 </Link>
               </>
             ) : (
@@ -86,11 +79,11 @@ export function MobileNav({
                   Connexion
                 </Link>
                 <Link
-                  href="/signup"
+                  href="/#questionnaire"
                   onClick={() => setOpen(false)}
                   className="rounded-xl bg-white px-4 py-3.5 text-center text-[15px] font-medium text-ink-950"
                 >
-                  Créer un compte
+                  Commencer
                 </Link>
               </>
             )}

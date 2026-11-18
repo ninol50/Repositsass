@@ -13,7 +13,7 @@ export default function GlobalError({ error, reset }: { error: Error; reset: () 
         Quelque chose a cassé
       </h1>
       <p className="mt-3 max-w-sm text-[14px] leading-relaxed text-ink-400">
-        L&apos;erreur a été enregistrée côté serveur. Tu peux réessayer — si ça persiste, ton brief est
+        L&apos;erreur a été enregistrée côté serveur. Tu peux réessayer — si ça persiste, ton plan est
         toujours dans ton espace.
       </p>
       <button

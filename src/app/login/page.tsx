@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Connexion",
-  description: "Connecte-toi à ton espace RepositSaaS.",
+  description: "Connecte-toi à ton espace ScaleBiz.",
 };
 
 export default async function LoginPage({
@@ -18,7 +18,7 @@ export default async function LoginPage({
 }) {
   const { next } = await searchParams;
   const user = await currentUser();
-  const target = next && next.startsWith("/") ? next : "/dashboard";
+  const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
   if (user) redirect(target);
 
   return (
@@ -33,7 +33,7 @@ export default async function LoginPage({
             Content de te revoir
           </h1>
           <p className="mt-2 text-[13.5px] leading-relaxed text-ink-400">
-            Connecte-toi pour retrouver tes briefs.
+            Connecte-toi pour retrouver tes plans.
           </p>
 
           <div className="mt-7">

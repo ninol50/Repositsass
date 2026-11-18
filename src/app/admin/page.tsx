@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { AdminPlanSelect } from "@/components/AdminPlanSelect";
 import { Alert, Badge } from "@/components/ui";
 import { adminConfigured, isAdminEmail } from "@/lib/admin";
 import { currentUser } from "@/lib/auth";
@@ -24,13 +25,6 @@ function formatDate(iso: string) {
   });
 }
 
-const PLAN_STYLE: Record<string, string> = {
-  free: "border-white/10 text-ink-400",
-  basic: "border-brand-500/40 text-brand-200",
-  pro: "border-mint-500/40 text-mint-400",
-  max: "border-amber-500/40 text-amber-200",
-};
-
 export default async function AdminPage() {
   const user = await currentUser();
   if (!user) redirect("/login?next=/admin");
@@ -45,8 +39,7 @@ export default async function AdminPage() {
     { label: "Comptes", value: stats.users },
     { label: "Payants", value: stats.paying },
     { label: "Inscrits (7 j)", value: stats.signupsLast7Days },
-    { label: "Briefs générés", value: stats.generations },
-    { label: "Avis", value: stats.reviews },
+    { label: "Plans générés", value: stats.generations },
   ];
 
   return (
@@ -61,11 +54,12 @@ export default async function AdminPage() {
           <Badge>Back-office</Badge>
         </div>
         <p className="mt-2 text-[14px] text-ink-400">
-          Visible uniquement par les emails listés dans{" "}
+          Change l&apos;offre d&apos;un compte dans la colonne « Offre » : c&apos;est le moyen de tester
+          les déblocages tant que le paiement n&apos;est pas branché. Visible uniquement par les emails listés dans{" "}
           <code className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[12.5px]">ADMIN_EMAILS</code>.
         </p>
 
-        <dl className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.06] sm:grid-cols-5">
+        <dl className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.06] sm:grid-cols-4">
           {tiles.map((t) => (
             <div key={t.label} className="bg-ink-950/85 px-4 py-5">
               <dt className="font-display text-[26px] font-semibold text-white">{t.value}</dt>
@@ -88,8 +82,8 @@ export default async function AdminPage() {
                 <thead>
                   <tr className="border-b border-white/[0.08] text-left text-[12px] uppercase tracking-wider text-ink-500">
                     <th className="px-5 py-3 font-medium">Email</th>
-                    <th className="px-5 py-3 font-medium">Plan</th>
-                    <th className="px-5 py-3 font-medium">Briefs</th>
+                    <th className="px-5 py-3 font-medium">Offre</th>
+                    <th className="px-5 py-3 font-medium">Plans</th>
                     <th className="px-5 py-3 font-medium">Inscrit le</th>
                   </tr>
                 </thead>
@@ -98,13 +92,7 @@ export default async function AdminPage() {
                     <tr key={u.id} className="border-b border-white/[0.05] last:border-0">
                       <td className="px-5 py-3.5 text-ink-100">{u.email}</td>
                       <td className="px-5 py-3.5">
-                        <span
-                          className={`inline-flex rounded-full border px-2.5 py-0.5 text-[12px] ${
-                            PLAN_STYLE[u.plan] ?? PLAN_STYLE.free
-                          }`}
-                        >
-                          {u.plan}
-                        </span>
+                        <AdminPlanSelect userId={u.id} plan={u.plan} />
                         {u.planSource && (
                           <span className="ml-2 text-[11.5px] text-ink-600">{u.planSource}</span>
                         )}

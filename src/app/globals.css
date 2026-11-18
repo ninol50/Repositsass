@@ -1,29 +1,33 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink-950: #07070b;
-  --color-ink-900: #0b0b12;
-  --color-ink-850: #101018;
-  --color-ink-800: #16161f;
-  --color-ink-700: #1f1f2b;
-  --color-ink-600: #2a2a38;
-  --color-ink-500: #3a3a4c;
-  --color-ink-400: #6b6b82;
-  --color-ink-300: #9a9ab0;
-  --color-ink-200: #c7c7d6;
-  --color-ink-100: #e9e9f2;
+  --color-ink-950: #060807;
+  --color-ink-900: #0a0d0c;
+  --color-ink-850: #0f1311;
+  --color-ink-800: #141a17;
+  --color-ink-700: #1d2521;
+  --color-ink-600: #29332e;
+  --color-ink-500: #4a5751;
+  --color-ink-400: #7d8a84;
+  --color-ink-300: #a5b1ab;
+  --color-ink-200: #cbd5d0;
+  --color-ink-100: #ebf1ee;
 
-  --color-brand-50: #f1edff;
-  --color-brand-100: #e0d7ff;
-  --color-brand-200: #c4b3ff;
-  --color-brand-300: #a68cff;
-  --color-brand-400: #8f6fff;
-  --color-brand-500: #7c5cff;
-  --color-brand-600: #6a45f5;
-  --color-brand-700: #5836d4;
+  --color-brand-50: #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-200: #a7f3d0;
+  --color-brand-300: #6ee7b7;
+  --color-brand-400: #34d399;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
 
-  --color-mint-400: #4fe3c1;
-  --color-mint-500: #22cfa8;
+  --color-mint-400: #4ade80;
+  --color-mint-500: #22c55e;
+
+  --color-gold-300: #fcd34d;
+  --color-gold-400: #fbbf24;
+  --color-gold-500: #f59e0b;
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-display), var(--font-inter), ui-sans-serif, sans-serif;
@@ -85,9 +89,9 @@ body {
   inset: 0;
   z-index: -2;
   background:
-    radial-gradient(60rem 40rem at 12% -10%, rgba(124, 92, 255, 0.22), transparent 60%),
-    radial-gradient(50rem 34rem at 88% 4%, rgba(34, 207, 168, 0.12), transparent 62%),
-    radial-gradient(44rem 30rem at 50% 108%, rgba(124, 92, 255, 0.12), transparent 60%);
+    radial-gradient(60rem 40rem at 12% -10%, rgba(16, 185, 129, 0.20), transparent 60%),
+    radial-gradient(50rem 34rem at 88% 4%, rgba(251, 191, 36, 0.08), transparent 62%),
+    radial-gradient(44rem 30rem at 50% 108%, rgba(16, 185, 129, 0.10), transparent 60%);
   pointer-events: none;
 }
 
@@ -128,7 +132,7 @@ body {
 }
 
 .text-gradient {
-  background: linear-gradient(100deg, #ffffff 8%, var(--color-brand-200) 48%, var(--color-mint-400) 96%);
+  background: linear-gradient(100deg, #ffffff 8%, var(--color-brand-200) 48%, var(--color-gold-300) 96%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -136,8 +140,8 @@ body {
 
 .glow-brand {
   box-shadow:
-    0 0 0 1px rgba(124, 92, 255, 0.35),
-    0 12px 40px -12px rgba(124, 92, 255, 0.55);
+    0 0 0 1px rgba(52, 211, 153, 0.45),
+    0 12px 40px -12px rgba(16, 185, 129, 0.55);
 }
 
 /* Animations ------------------------------------------------------ */
@@ -158,13 +162,13 @@ body {
 
 @keyframes pulse-ring {
   0% {
-    box-shadow: 0 0 0 0 rgba(124, 92, 255, 0.45);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45);
   }
   70% {
-    box-shadow: 0 0 0 12px rgba(124, 92, 255, 0);
+    box-shadow: 0 0 0 12px rgba(16, 185, 129, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(124, 92, 255, 0);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
   }
 }
 
@@ -196,125 +200,26 @@ body {
   }
 }
 
-/* Generated-prompt rendering -------------------------------------- */
-.prompt-doc {
-  font-size: 14px;
-  line-height: 1.75;
-  color: var(--color-ink-200);
-}
-.prompt-doc h1 {
-  font-family: var(--font-display);
-  font-size: 26px;
-  font-weight: 600;
-  color: #fff;
-  margin: 0 0 18px;
-  letter-spacing: -0.02em;
-}
-.prompt-doc h2 {
-  font-family: var(--font-display);
-  font-size: 19px;
-  font-weight: 600;
-  color: #fff;
-  margin: 34px 0 12px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  letter-spacing: -0.01em;
-}
-.prompt-doc h3 {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--color-brand-200);
-  margin: 22px 0 8px;
-}
-.prompt-doc p {
-  margin: 0 0 12px;
-}
-.prompt-doc ul,
-.prompt-doc ol {
-  margin: 0 0 14px;
-  padding-left: 20px;
-}
-.prompt-doc ul {
-  list-style: disc;
-}
-.prompt-doc ol {
-  list-style: decimal;
-}
-.prompt-doc li {
-  margin-bottom: 6px;
-}
-.prompt-doc strong {
-  color: #fff;
-  font-weight: 600;
-}
-.prompt-doc code {
-  font-family: var(--font-mono);
-  font-size: 12.5px;
-  background: rgba(124, 92, 255, 0.14);
-  border: 1px solid rgba(124, 92, 255, 0.2);
-  padding: 1px 5px;
-  border-radius: 5px;
-  color: var(--color-brand-100);
-}
-.prompt-doc pre {
-  background: var(--color-ink-950);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 12px;
-  padding: 14px 16px;
-  overflow-x: auto;
-  margin: 0 0 16px;
-}
-.prompt-doc pre code {
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--color-ink-200);
-  font-size: 12.5px;
-  line-height: 1.65;
-}
-.prompt-doc blockquote {
-  border-left: 3px solid var(--color-brand-500);
-  background: rgba(124, 92, 255, 0.07);
-  padding: 10px 14px;
-  margin: 0 0 16px;
-  border-radius: 0 8px 8px 0;
-  color: var(--color-ink-200);
-}
-.prompt-doc table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 0 0 18px;
-  font-size: 13px;
-  display: block;
-  overflow-x: auto;
-}
-.prompt-doc th,
-.prompt-doc td {
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  padding: 8px 11px;
-  text-align: left;
-  vertical-align: top;
-}
-.prompt-doc th {
-  background: rgba(255, 255, 255, 0.035);
-  color: #fff;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.prompt-doc hr {
-  display: none;
-}
-.prompt-doc a {
-  color: var(--color-brand-300);
-  text-decoration: underline;
+/* Locked content -------------------------------------------------- */
+.redacted {
+  display: inline-block;
+  height: 0.8em;
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+  filter: blur(1.5px);
+  vertical-align: middle;
 }
 
-.prompt-doc .task-list {
-  list-style: none;
-  padding-left: 0;
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
 }
-.prompt-doc .task-item {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
+
+.animate-shimmer {
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
 }

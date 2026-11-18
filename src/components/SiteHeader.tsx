@@ -1,17 +1,18 @@
 import Link from "next/link";
-import { currentPublicUser } from "@/lib/auth";
+import { isAdminEmail } from "@/lib/admin";
+import { currentUser } from "@/lib/auth";
 import { Logo } from "./Logo";
 import { MobileNav } from "./MobileNav";
 
 const LINKS = [
   { href: "/#comment-ca-marche", label: "Comment ça marche" },
-  { href: "/#avis", label: "Avis" },
-  { href: "/pricing", label: "Tarifs" },
+  { href: "/pricing", label: "Offres" },
   { href: "/faq", label: "FAQ" },
 ];
 
 export async function SiteHeader() {
-  const user = await currentPublicUser();
+  const user = await currentUser().catch(() => null);
+  const admin = user ? isAdminEmail(user.email) : false;
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/[0.07] bg-ink-950/70 backdrop-blur-xl">
@@ -33,44 +34,28 @@ export async function SiteHeader() {
         <div className="hidden items-center gap-2 md:flex">
           {user ? (
             <>
-              <Link
-                href="/guide"
-                className="rounded-lg px-3 py-2 text-[13.5px] text-ink-300 transition-colors hover:text-white"
-              >
-                Guide
-              </Link>
-              <Link
-                href="/ideas"
-                className="rounded-lg px-3 py-2 text-[13.5px] text-ink-300 transition-colors hover:text-white"
-              >
-                Idées
-              </Link>
+              {admin && (
+                <Link href="/admin" className="rounded-lg px-3 py-2 text-[13.5px] text-ink-300 transition-colors hover:text-white">
+                  Admin
+                </Link>
+              )}
               <Link
                 href="/dashboard"
-                className="rounded-lg px-3 py-2 text-[13.5px] text-ink-300 transition-colors hover:text-white"
-              >
-                Mes briefs
-              </Link>
-              <Link
-                href="/brief"
                 className="rounded-lg bg-white px-4 py-2 text-[13.5px] font-medium text-ink-950 transition-transform hover:scale-[1.02]"
               >
-                Nouveau brief
+                Mon espace
               </Link>
             </>
           ) : (
             <>
-              <Link
-                href="/login"
-                className="rounded-lg px-3 py-2 text-[13.5px] text-ink-300 transition-colors hover:text-white"
-              >
+              <Link href="/login" className="rounded-lg px-3 py-2 text-[13.5px] text-ink-300 transition-colors hover:text-white">
                 Connexion
               </Link>
               <Link
-                href="/signup"
+                href="/#questionnaire"
                 className="rounded-lg bg-white px-4 py-2 text-[13.5px] font-medium text-ink-950 transition-transform hover:scale-[1.02]"
               >
-                Créer un compte
+                Commencer
               </Link>
             </>
           )}

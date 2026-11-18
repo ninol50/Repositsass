@@ -18,7 +18,7 @@ const VARIANTS = {
   primary:
     "bg-white text-ink-950 hover:bg-ink-100 active:scale-[0.985] shadow-[0_8px_24px_-10px_rgba(255,255,255,0.35)]",
   brand:
-    "text-white glow-brand hover:brightness-110 active:scale-[0.985] bg-[linear-gradient(120deg,#8f6fff,#6a45f5)]",
+    "text-ink-950 font-semibold glow-brand hover:brightness-110 active:scale-[0.985] bg-[linear-gradient(120deg,#34d399,#10b981)]",
   ghost: "text-ink-200 hover:bg-white/[0.06] hover:text-white",
   outline: "border border-white/12 text-white hover:border-white/25 hover:bg-white/[0.04]",
   danger: "border border-red-500/30 text-red-300 hover:bg-red-500/10",
@@ -85,6 +85,46 @@ export function SectionHeading({
         <p className="mt-4 text-[15px] leading-relaxed text-ink-400 sm:text-[16px]">{description}</p>
       )}
     </div>
+  );
+}
+
+export function LockIcon({ size = 16, className }: { size?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <rect x="4" y="10.5" width="16" height="10.5" rx="2.5" />
+      <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" />
+      <path d="M12 15v2.2" />
+    </svg>
+  );
+}
+
+export function CheckIcon({ size = 12, className }: { size?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
   );
 }
 

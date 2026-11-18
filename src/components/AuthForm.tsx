@@ -5,7 +5,25 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Alert } from "./ui";
 
-export function AuthForm({ mode, next }: { mode: "login" | "signup"; next: string }) {
+/**
+ * Email + password form.
+ *
+ * On a page it redirects to `next`. Inline (the locked generation), the parent
+ * passes `onSuccess` and `onSwitchMode` so the visitor never leaves the flow.
+ */
+export function AuthForm({
+  mode,
+  next = "/dashboard",
+  onSuccess,
+  onSwitchMode,
+  submitLabel,
+}: {
+  mode: "login" | "signup";
+  next?: string;
+  onSuccess?: () => void | Promise<void>;
+  onSwitchMode?: () => void;
+  submitLabel?: string;
+}) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,54 +38,80 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next: strin
     setError(null);
     setPending(true);
 
-    const res = await fetch(`/api/auth/${mode}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    try {
+      const res = await fetch(`/api/auth/${mode}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
 
-    if (!res.ok) {
-      setError(data.error ?? "Quelque chose n'a pas fonctionné.");
+      if (!res.ok) {
+        setError(data.error ?? "Quelque chose n'a pas fonctionné.");
+        setPending(false);
+        return;
+      }
+
+      if (onSuccess) {
+        await onSuccess();
+        return;
+      }
+      router.push(next);
+      router.refresh();
+    } catch {
+      setError("Connexion impossible. Vérifie ta connexion internet et réessaie.");
       setPending(false);
-      return;
     }
-
-    router.push(next);
-    router.refresh();
   }
+
+  const inputClass =
+    "h-12 w-full rounded-xl border border-white/[0.09] bg-ink-950 px-4 text-[15px] text-white placeholder:text-ink-600 focus:border-brand-500/60 focus:outline-none";
+
+  const switchLink = (label: string, target: "login" | "signup") =>
+    onSwitchMode ? (
+      <button type="button" onClick={onSwitchMode} className="text-brand-300 underline underline-offset-4 hover:text-brand-200">
+        {label}
+      </button>
+    ) : (
+      <Link
+        href={`/${target}?next=${encodeURIComponent(next)}`}
+        className="text-brand-300 underline underline-offset-4 hover:text-brand-200"
+      >
+        {label}
+      </Link>
+    );
 
   return (
     <form onSubmit={submit} className="space-y-5">
       <div>
-        <label htmlFor="email" className="mb-1.5 block text-[13px] text-ink-400">
+        <label htmlFor={`${mode}-email`} className="mb-1.5 block text-[13px] text-ink-400">
           Email
         </label>
         <input
-          id="email"
+          id={`${mode}-email`}
           type="email"
           autoComplete="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="h-12 w-full rounded-xl border border-white/[0.09] bg-ink-950 px-4 text-[15px] text-white placeholder:text-ink-600 focus:border-brand-500/60 focus:outline-none"
+          className={inputClass}
           placeholder="toi@exemple.com"
         />
       </div>
 
       <div>
-        <label htmlFor="password" className="mb-1.5 block text-[13px] text-ink-400">
+        <label htmlFor={`${mode}-password`} className="mb-1.5 block text-[13px] text-ink-400">
           Mot de passe
         </label>
         <div className="relative">
           <input
-            id="password"
+            id={`${mode}-password`}
             type={show ? "text" : "password"}
             autoComplete={isSignup ? "new-password" : "current-password"}
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="h-12 w-full rounded-xl border border-white/[0.09] bg-ink-950 px-4 pr-20 text-[15px] text-white placeholder:text-ink-600 focus:border-brand-500/60 focus:outline-none"
+            className={`${inputClass} pr-20`}
             placeholder={isSignup ? "8 caractères, une lettre, un chiffre" : "••••••••"}
           />
           <button
@@ -85,26 +129,16 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next: strin
       <button
         type="submit"
         disabled={pending}
-        className="h-12 w-full rounded-xl bg-[linear-gradient(120deg,#8f6fff,#6a45f5)] text-[15px] font-medium text-white transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-50"
+        className="h-12 w-full rounded-xl bg-[linear-gradient(120deg,#34d399,#10b981)] text-[15px] font-semibold text-ink-950 transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-50"
       >
-        {pending ? "Un instant..." : isSignup ? "Créer mon compte" : "Se connecter"}
+        {pending ? "Un instant..." : (submitLabel ?? (isSignup ? "Créer mon compte" : "Se connecter"))}
       </button>
 
       <p className="text-center text-[13.5px] text-ink-400">
         {isSignup ? (
-          <>
-            Déjà un compte ?{" "}
-            <Link href={`/login?next=${encodeURIComponent(next)}`} className="text-brand-300 underline underline-offset-4 hover:text-brand-200">
-              Se connecter
-            </Link>
-          </>
+          <>Déjà un compte ? {switchLink("Se connecter", "login")}</>
         ) : (
-          <>
-            Pas encore de compte ?{" "}
-            <Link href={`/signup?next=${encodeURIComponent(next)}`} className="text-brand-300 underline underline-offset-4 hover:text-brand-200">
-              En créer un
-            </Link>
-          </>
+          <>Pas encore de compte ? {switchLink("En créer un", "signup")}</>
         )}
       </p>
 

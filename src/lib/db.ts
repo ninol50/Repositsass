@@ -8,10 +8,14 @@
  *
  * The memory driver is deliberately not a fallback we hide: /api/health reports
  * which one is live, so a production deploy without a database is visible.
+ *
+ * Tables are prefixed `sb_` so ScaleBiz can share a database with another app
+ * without colliding with its tables.
  */
 
 import { randomUUID } from "crypto";
-import { hasActivePlan, type Generation, type Plan, type Review, type User } from "./types";
+import type { Answers } from "./questions";
+import { hasActivePlan, type Generation, type Plan, type User } from "./types";
 
 export type Driver = "postgres" | "memory";
 
@@ -21,37 +25,10 @@ export interface Store {
   createUser(email: string, passwordHash: string): Promise<User>;
   getUserByEmail(email: string): Promise<User | null>;
   getUserById(id: string): Promise<User | null>;
-  setPlan(
-    userId: string,
-    plan: Plan,
-    source: string,
-    expiresAt: string | null,
-    membershipId: string | null,
-  ): Promise<void>;
-  /** The address the customer paid with, when it differs from their account address. */
-  setBillingEmail(userId: string, email: string): Promise<void>;
-  /** Matches on the account address OR the billing address. */
-  findUserByAnyEmail(email: string): Promise<User | null>;
-  /**
-   * Writes one line in the credit journal.
-   *
-   * `created` is false when this membership was already credited for this
-   * period. `ownerId` names the account that holds it — which is how a second
-   * account is stopped from claiming somebody else's payment.
-   */
-  recordPlanGrant(grant: PlanGrantInput): Promise<PlanGrantResult>;
-  /** Accounts to confront with Whop in the nightly reconciliation. */
-  listAccountsForReconcile(limit?: number): Promise<ReconcileAccount[]>;
-  createGeneration(g: Omit<Generation, "id" | "createdAt">): Promise<Generation>;
+  setPlan(userId: string, plan: Plan, source: string, expiresAt: string | null): Promise<void>;
+  createGeneration(userId: string, answers: Answers): Promise<Generation>;
   getGeneration(id: string): Promise<Generation | null>;
   listGenerations(userId: string, limit?: number): Promise<Generation[]>;
-  countGenerations(userId: string): Promise<number>;
-  /** Generations since a date — the monthly quota window. */
-  countGenerationsSince(userId: string, since: Date): Promise<number>;
-  createReview(r: Omit<Review, "id" | "createdAt" | "approved">): Promise<Review>;
-  listReviews(limit?: number): Promise<Review[]>;
-  getReviewByUser(userId: string): Promise<Review | null>;
-  reviewStats(): Promise<{ count: number; average: number }>;
   /** Real round-trip to the store, so a health check proves more than config parsing. */
   ping(): Promise<PingResult>;
   /** Back-office: the signed-up accounts, newest first. */
@@ -74,40 +51,10 @@ export type AdminStats = {
   users: number;
   paying: number;
   generations: number;
-  reviews: number;
   signupsLast7Days: number;
 };
 
 export type PingResult = { ok: true; latencyMs: number } | { ok: false; error: string };
-
-/** One line of the credit journal. */
-export type PlanGrantInput = {
-  userId: string;
-  membershipId: string;
-  plan: Plan;
-  source: string;
-  /**
-   * Identifies the period being credited: the membership plus its renewal
-   * date. A renewal produces a new key and is credited again; re-opening the
-   * recovery page does not.
-   */
-  periodKey: string;
-  expiresAt: string | null;
-};
-
-export type PlanGrantResult = {
-  created: boolean;
-  /** The account this membership-period belongs to. */
-  ownerId: string;
-};
-
-export type ReconcileAccount = {
-  id: string;
-  email: string;
-  billingEmail: string | null;
-  plan: Plan;
-  planExpiresAt: string | null;
-};
 
 /* ------------------------------------------------------------------ */
 /* Memory driver                                                       */
@@ -116,23 +63,15 @@ export type ReconcileAccount = {
 type MemoryState = {
   users: Map<string, User>;
   generations: Map<string, Generation>;
-  reviews: Map<string, Review>;
-  /** Credit journal: period key -> the account credited. */
-  grants: Map<string, string>;
 };
 
-const globalMemory = globalThis as unknown as { __repositsaas_memory?: MemoryState };
+const globalMemory = globalThis as unknown as { __scalebiz_memory?: MemoryState };
 
 function memoryState(): MemoryState {
-  if (!globalMemory.__repositsaas_memory) {
-    globalMemory.__repositsaas_memory = {
-      users: new Map(),
-      generations: new Map(),
-      reviews: new Map(),
-      grants: new Map(),
-    };
+  if (!globalMemory.__scalebiz_memory) {
+    globalMemory.__scalebiz_memory = { users: new Map(), generations: new Map() };
   }
-  return globalMemory.__repositsaas_memory;
+  return globalMemory.__scalebiz_memory;
 }
 
 class MemoryStore implements Store {
@@ -143,19 +82,16 @@ class MemoryStore implements Store {
   }
 
   async createUser(email: string, passwordHash: string): Promise<User> {
-    const s = memoryState();
     const user: User = {
       id: randomUUID(),
       email: email.toLowerCase(),
       passwordHash,
       plan: "free",
-      billingEmail: null,
       planSource: null,
       planExpiresAt: null,
-      whopMembershipId: null,
       createdAt: new Date().toISOString(),
     };
-    s.users.set(user.id, user);
+    memoryState().users.set(user.id, user);
     return user;
   }
 
@@ -169,49 +105,16 @@ class MemoryStore implements Store {
     return memoryState().users.get(id) ?? null;
   }
 
-  async setPlan(userId: string, plan: Plan, source: string, expiresAt: string | null, membershipId: string | null) {
+  async setPlan(userId: string, plan: Plan, source: string, expiresAt: string | null) {
     const u = memoryState().users.get(userId);
     if (!u) return;
     u.plan = plan;
     u.planSource = source;
     u.planExpiresAt = expiresAt;
-    u.whopMembershipId = membershipId;
   }
 
-  async setBillingEmail(userId: string, email: string) {
-    const u = memoryState().users.get(userId);
-    if (u) u.billingEmail = email.toLowerCase();
-  }
-
-  async findUserByAnyEmail(email: string) {
-    const target = email.trim().toLowerCase();
-    if (!target) return null;
-    for (const u of memoryState().users.values()) {
-      if (u.email === target || u.billingEmail === target) return u;
-    }
-    return null;
-  }
-
-  async recordPlanGrant(grant: PlanGrantInput): Promise<PlanGrantResult> {
-    const s = memoryState();
-    const existing = s.grants.get(grant.periodKey);
-    if (existing) return { created: false, ownerId: existing };
-    s.grants.set(grant.periodKey, grant.userId);
-    return { created: true, ownerId: grant.userId };
-  }
-
-  async listAccountsForReconcile(limit = 1000): Promise<ReconcileAccount[]> {
-    return [...memoryState().users.values()].slice(0, limit).map((u) => ({
-      id: u.id,
-      email: u.email,
-      billingEmail: u.billingEmail,
-      plan: u.plan,
-      planExpiresAt: u.planExpiresAt,
-    }));
-  }
-
-  async createGeneration(g: Omit<Generation, "id" | "createdAt">) {
-    const gen: Generation = { ...g, id: randomUUID(), createdAt: new Date().toISOString() };
+  async createGeneration(userId: string, answers: Answers) {
+    const gen: Generation = { id: randomUUID(), userId, answers, createdAt: new Date().toISOString() };
     memoryState().generations.set(gen.id, gen);
     return gen;
   }
@@ -225,41 +128,6 @@ class MemoryStore implements Store {
       .filter((g) => g.userId === userId)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .slice(0, limit);
-  }
-
-  async countGenerations(userId: string) {
-    return [...memoryState().generations.values()].filter((g) => g.userId === userId).length;
-  }
-
-  async countGenerationsSince(userId: string, since: Date) {
-    return [...memoryState().generations.values()].filter(
-      (g) => g.userId === userId && new Date(g.createdAt) >= since,
-    ).length;
-  }
-
-  async createReview(r: Omit<Review, "id" | "createdAt" | "approved">) {
-    const review: Review = { ...r, id: randomUUID(), approved: true, createdAt: new Date().toISOString() };
-    memoryState().reviews.set(review.id, review);
-    return review;
-  }
-
-  async listReviews(limit = 12) {
-    return [...memoryState().reviews.values()]
-      .filter((r) => r.approved)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .slice(0, limit);
-  }
-
-  async getReviewByUser(userId: string) {
-    for (const r of memoryState().reviews.values()) if (r.userId === userId) return r;
-    return null;
-  }
-
-  async reviewStats() {
-    const all = await this.listReviews(1000);
-    if (all.length === 0) return { count: 0, average: 0 };
-    const avg = all.reduce((sum, r) => sum + r.rating, 0) / all.length;
-    return { count: all.length, average: Math.round(avg * 10) / 10 };
   }
 
   async ping(): Promise<PingResult> {
@@ -289,7 +157,6 @@ class MemoryStore implements Store {
       users: users.length,
       paying: users.filter((u) => hasActivePlan(u)).length,
       generations: memoryState().generations.size,
-      reviews: memoryState().reviews.size,
       signupsLast7Days: users.filter((u) => new Date(u.createdAt).getTime() > weekAgo).length,
     };
   }
@@ -308,10 +175,8 @@ function rowToUser(r: SqlRow): User {
     email: String(r.email),
     passwordHash: String(r.password_hash),
     plan: String(r.plan) as Plan,
-    billingEmail: r.billing_email ? String(r.billing_email) : null,
     planSource: r.plan_source ? String(r.plan_source) : null,
     planExpiresAt: r.plan_expires_at ? new Date(String(r.plan_expires_at)).toISOString() : null,
-    whopMembershipId: r.whop_membership_id ? String(r.whop_membership_id) : null,
     createdAt: new Date(String(r.created_at)).toISOString(),
   };
 }
@@ -320,24 +185,12 @@ function rowToGeneration(r: SqlRow): Generation {
   return {
     id: String(r.id),
     userId: String(r.user_id),
-    productName: String(r.product_name),
-    summary: String(r.summary),
-    answers: (typeof r.answers === "string" ? JSON.parse(r.answers) : r.answers) as Generation["answers"],
+    answers: (typeof r.answers === "string" ? JSON.parse(r.answers) : r.answers) as Answers,
     createdAt: new Date(String(r.created_at)).toISOString(),
   };
 }
 
-function rowToReview(r: SqlRow): Review {
-  return {
-    id: String(r.id),
-    userId: String(r.user_id),
-    authorName: String(r.author_name),
-    rating: Number(r.rating),
-    body: String(r.body),
-    approved: Boolean(r.approved),
-    createdAt: new Date(String(r.created_at)).toISOString(),
-  };
-}
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 class PostgresStore implements Store {
   driver: Driver = "postgres";
@@ -349,219 +202,92 @@ class PostgresStore implements Store {
   }
 
   async init() {
-    if (!this.ready) this.ready = this.migrate();
+    // A failed migration must be retried on the next call, not cached forever.
+    if (!this.ready) this.ready = this.migrate().catch((err) => {
+      this.ready = null;
+      throw err;
+    });
     return this.ready;
   }
 
   private async migrate() {
     const sql = this.sql;
-    await sql`CREATE TABLE IF NOT EXISTS users (
+    await sql`CREATE TABLE IF NOT EXISTS sb_users (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       email text UNIQUE NOT NULL,
       password_hash text NOT NULL,
       plan text NOT NULL DEFAULT 'free',
       plan_source text,
       plan_expires_at timestamptz,
-      whop_membership_id text,
       created_at timestamptz NOT NULL DEFAULT now()
     )`;
-    await sql`CREATE TABLE IF NOT EXISTS generations (
+    await sql`CREATE TABLE IF NOT EXISTS sb_generations (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      product_name text NOT NULL,
-      summary text NOT NULL DEFAULT '',
+      user_id uuid NOT NULL REFERENCES sb_users(id) ON DELETE CASCADE,
       answers jsonb NOT NULL,
       created_at timestamptz NOT NULL DEFAULT now()
     )`;
-    await sql`CREATE TABLE IF NOT EXISTS reviews (
-      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      user_id uuid NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-      author_name text NOT NULL,
-      rating int NOT NULL CHECK (rating BETWEEN 1 AND 5),
-      body text NOT NULL,
-      approved boolean NOT NULL DEFAULT true,
-      created_at timestamptz NOT NULL DEFAULT now()
-    )`;
-    await sql`CREATE INDEX IF NOT EXISTS generations_user_idx ON generations(user_id, created_at DESC)`;
-
-    // Added after the first deployments, so it is an ALTER rather than part of
-    // the CREATE above: existing databases must pick it up too.
-    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_email text`;
-    await sql`CREATE INDEX IF NOT EXISTS users_billing_email_idx ON users(billing_email)`;
-
-    // The credit journal. The unique key is what makes granting idempotent:
-    // re-opening the recovery page or re-running the nightly job writes
-    // nothing the second time.
-    await sql`CREATE TABLE IF NOT EXISTS plan_grants (
-      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      membership_id text NOT NULL,
-      plan text NOT NULL,
-      source text NOT NULL,
-      period_key text NOT NULL,
-      expires_at timestamptz,
-      created_at timestamptz NOT NULL DEFAULT now(),
-      UNIQUE (period_key)
-    )`;
+    await sql`CREATE INDEX IF NOT EXISTS sb_generations_user_idx ON sb_generations(user_id, created_at DESC)`;
   }
 
   async createUser(email: string, passwordHash: string) {
     await this.init();
     const rows = await this.sql`
-      INSERT INTO users (email, password_hash) VALUES (${email.toLowerCase()}, ${passwordHash})
+      INSERT INTO sb_users (email, password_hash) VALUES (${email.toLowerCase()}, ${passwordHash})
       RETURNING *`;
     return rowToUser(rows[0]);
   }
 
   async getUserByEmail(email: string) {
     await this.init();
-    const rows = await this.sql`SELECT * FROM users WHERE email = ${email.toLowerCase()} LIMIT 1`;
+    const rows = await this.sql`SELECT * FROM sb_users WHERE email = ${email.toLowerCase()} LIMIT 1`;
     return rows[0] ? rowToUser(rows[0]) : null;
   }
 
   async getUserById(id: string) {
     await this.init();
-    const rows = await this.sql`SELECT * FROM users WHERE id = ${id} LIMIT 1`;
+    if (!UUID.test(id)) return null;
+    const rows = await this.sql`SELECT * FROM sb_users WHERE id = ${id} LIMIT 1`;
     return rows[0] ? rowToUser(rows[0]) : null;
   }
 
-  async setPlan(userId: string, plan: Plan, source: string, expiresAt: string | null, membershipId: string | null) {
+  async setPlan(userId: string, plan: Plan, source: string, expiresAt: string | null) {
     await this.init();
     await this.sql`
-      UPDATE users
-      SET plan = ${plan}, plan_source = ${source}, plan_expires_at = ${expiresAt}, whop_membership_id = ${membershipId}
+      UPDATE sb_users SET plan = ${plan}, plan_source = ${source}, plan_expires_at = ${expiresAt}
       WHERE id = ${userId}`;
   }
 
-  async setBillingEmail(userId: string, email: string) {
-    await this.init();
-    await this.sql`UPDATE users SET billing_email = ${email.toLowerCase()} WHERE id = ${userId}`;
-  }
-
-  async findUserByAnyEmail(email: string) {
-    await this.init();
-    const target = email.trim().toLowerCase();
-    if (!target) return null;
-    const rows = await this.sql`
-      SELECT * FROM users
-      WHERE email = ${target} OR billing_email = ${target}
-      ORDER BY (email = ${target}) DESC
-      LIMIT 1`;
-    return rows[0] ? rowToUser(rows[0]) : null;
-  }
-
-  async recordPlanGrant(grant: PlanGrantInput): Promise<PlanGrantResult> {
-    await this.init();
-    const inserted = await this.sql`
-      INSERT INTO plan_grants (user_id, membership_id, plan, source, period_key, expires_at)
-      VALUES (${grant.userId}, ${grant.membershipId}, ${grant.plan}, ${grant.source}, ${grant.periodKey}, ${grant.expiresAt})
-      ON CONFLICT (period_key) DO NOTHING
-      RETURNING user_id`;
-    if (inserted.length > 0) return { created: true, ownerId: String(inserted[0].user_id) };
-
-    const existing = await this.sql`
-      SELECT user_id FROM plan_grants WHERE period_key = ${grant.periodKey} LIMIT 1`;
-    return { created: false, ownerId: existing[0] ? String(existing[0].user_id) : grant.userId };
-  }
-
-  async listAccountsForReconcile(limit = 1000): Promise<ReconcileAccount[]> {
+  async createGeneration(userId: string, answers: Answers) {
     await this.init();
     const rows = await this.sql`
-      SELECT id, email, billing_email, plan, plan_expires_at
-      FROM users
-      ORDER BY created_at DESC
-      LIMIT ${limit}`;
-    return rows.map((r) => ({
-      id: String(r.id),
-      email: String(r.email),
-      billingEmail: r.billing_email ? String(r.billing_email) : null,
-      plan: String(r.plan) as Plan,
-      planExpiresAt: r.plan_expires_at ? new Date(String(r.plan_expires_at)).toISOString() : null,
-    }));
-  }
-
-  async createGeneration(g: Omit<Generation, "id" | "createdAt">) {
-    await this.init();
-    const rows = await this.sql`
-      INSERT INTO generations (user_id, product_name, summary, answers)
-      VALUES (${g.userId}, ${g.productName}, ${g.summary}, ${JSON.stringify(g.answers)}::jsonb)
+      INSERT INTO sb_generations (user_id, answers)
+      VALUES (${userId}, ${JSON.stringify(answers)}::jsonb)
       RETURNING *`;
     return rowToGeneration(rows[0]);
   }
 
   async getGeneration(id: string) {
     await this.init();
-    if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
-    const rows = await this.sql`SELECT * FROM generations WHERE id = ${id} LIMIT 1`;
+    if (!UUID.test(id)) return null;
+    const rows = await this.sql`SELECT * FROM sb_generations WHERE id = ${id} LIMIT 1`;
     return rows[0] ? rowToGeneration(rows[0]) : null;
   }
 
   async listGenerations(userId: string, limit = 50) {
     await this.init();
     const rows = await this.sql`
-      SELECT * FROM generations WHERE user_id = ${userId} ORDER BY created_at DESC LIMIT ${limit}`;
+      SELECT * FROM sb_generations WHERE user_id = ${userId} ORDER BY created_at DESC LIMIT ${limit}`;
     return rows.map(rowToGeneration);
   }
 
-  async countGenerations(userId: string) {
-    await this.init();
-    const rows = await this.sql`SELECT count(*)::int AS n FROM generations WHERE user_id = ${userId}`;
-    return Number(rows[0]?.n ?? 0);
-  }
-
-  async countGenerationsSince(userId: string, since: Date) {
-    await this.init();
-    const rows = await this.sql`
-      SELECT count(*)::int AS n FROM generations
-      WHERE user_id = ${userId} AND created_at >= ${since.toISOString()}`;
-    return Number(rows[0]?.n ?? 0);
-  }
-
-  async createReview(r: Omit<Review, "id" | "createdAt" | "approved">) {
-    await this.init();
-    const rows = await this.sql`
-      INSERT INTO reviews (user_id, author_name, rating, body)
-      VALUES (${r.userId}, ${r.authorName}, ${r.rating}, ${r.body})
-      ON CONFLICT (user_id) DO UPDATE
-        SET author_name = EXCLUDED.author_name, rating = EXCLUDED.rating, body = EXCLUDED.body, created_at = now()
-      RETURNING *`;
-    return rowToReview(rows[0]);
-  }
-
-  async listReviews(limit = 12) {
-    await this.init();
-    const rows = await this.sql`
-      SELECT * FROM reviews WHERE approved = true ORDER BY created_at DESC LIMIT ${limit}`;
-    return rows.map(rowToReview);
-  }
-
-  async getReviewByUser(userId: string) {
-    await this.init();
-    const rows = await this.sql`SELECT * FROM reviews WHERE user_id = ${userId} LIMIT 1`;
-    return rows[0] ? rowToReview(rows[0]) : null;
-  }
-
-  async reviewStats() {
-    await this.init();
-    const rows = await this.sql`
-      SELECT count(*)::int AS n, COALESCE(avg(rating), 0)::float AS avg FROM reviews WHERE approved = true`;
-    const count = Number(rows[0]?.n ?? 0);
-    const average = Math.round(Number(rows[0]?.avg ?? 0) * 10) / 10;
-    return { count, average };
-  }
-
-  /**
-   * Deliberately does NOT run init(): this separates "can we reach the database
-   * and authenticate" from "are the migrations applied". A wrong password shows
-   * up here as a credentials error rather than a confusing migration failure.
-   */
   async listUsers(limit = 200): Promise<AdminUser[]> {
     await this.init();
     const rows = await this.sql`
       SELECT u.id, u.email, u.plan, u.plan_source, u.plan_expires_at, u.created_at,
              count(g.id)::int AS generation_count
-      FROM users u
-      LEFT JOIN generations g ON g.user_id = u.id
+      FROM sb_users u
+      LEFT JOIN sb_generations g ON g.user_id = u.id
       GROUP BY u.id
       ORDER BY u.created_at DESC
       LIMIT ${limit}`;
@@ -580,23 +306,25 @@ class PostgresStore implements Store {
     await this.init();
     const rows = await this.sql`
       SELECT
-        (SELECT count(*)::int FROM users) AS users,
-        (SELECT count(*)::int FROM users
+        (SELECT count(*)::int FROM sb_users) AS users,
+        (SELECT count(*)::int FROM sb_users
           WHERE plan <> 'free'
             AND (plan_expires_at IS NULL OR plan_expires_at > now())) AS paying,
-        (SELECT count(*)::int FROM generations) AS generations,
-        (SELECT count(*)::int FROM reviews) AS reviews,
-        (SELECT count(*)::int FROM users WHERE created_at > now() - interval '7 days') AS signups_last_7_days`;
+        (SELECT count(*)::int FROM sb_generations) AS generations,
+        (SELECT count(*)::int FROM sb_users WHERE created_at > now() - interval '7 days') AS signups_last_7_days`;
     const r = rows[0] ?? {};
     return {
       users: Number(r.users ?? 0),
       paying: Number(r.paying ?? 0),
       generations: Number(r.generations ?? 0),
-      reviews: Number(r.reviews ?? 0),
       signupsLast7Days: Number(r.signups_last_7_days ?? 0),
     };
   }
 
+  /**
+   * Deliberately does NOT run init(): this separates "can we reach the database
+   * and authenticate" from "are the migrations applied".
+   */
   async ping(): Promise<PingResult> {
     const started = Date.now();
     try {
@@ -655,10 +383,10 @@ export function describeDatabase(): { host: string; port: string; pooled: boolea
 }
 
 /** One pooled client per runtime instance, reused across lambda invocations. */
-const globalSql = globalThis as unknown as { __repositsaas_sql?: SqlClient };
+const globalSql = globalThis as unknown as { __scalebiz_sql?: SqlClient };
 
 function createSqlClient(url: string): SqlClient {
-  if (globalSql.__repositsaas_sql) return globalSql.__repositsaas_sql;
+  if (globalSql.__scalebiz_sql) return globalSql.__scalebiz_sql;
 
   // Imported lazily so the memory driver needs no database package at runtime.
   const postgres = require("postgres") as typeof import("postgres");
@@ -680,7 +408,7 @@ function createSqlClient(url: string): SqlClient {
     ssl: isLocalHost(host) ? false : "require",
   }) as unknown as SqlClient;
 
-  globalSql.__repositsaas_sql = client;
+  globalSql.__scalebiz_sql = client;
   return client;
 }
 

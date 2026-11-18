@@ -1,51 +1,48 @@
-export type Plan = "free" | "basic" | "pro" | "max";
+import type { Answers } from "./questions";
+
+/** Paid tiers, cheapest first. "free" = account created, nothing bought yet. */
+export type Plan = "free" | "starter" | "pro" | "elite";
+
+export const PLANS: readonly Plan[] = ["free", "starter", "pro", "elite"];
+
+export function isPlan(value: unknown): value is Plan {
+  return typeof value === "string" && (PLANS as readonly string[]).includes(value);
+}
 
 export type User = {
   id: string;
   email: string;
   passwordHash: string;
   plan: Plan;
-  /**
-   * The address used on Whop, when it differs from the account address.
-   * Whop pre-fills the customer's WHOP account email, which is very often not
-   * the one they signed up here with — and email is what ties a payment to an
-   * account. Without this column those customers pay and are never credited.
-   */
-  billingEmail: string | null;
+  /** Who set the plan: "admin", later the payment provider. */
   planSource: string | null;
+  /** null = no end date. */
   planExpiresAt: string | null;
-  whopMembershipId: string | null;
   createdAt: string;
 };
 
-export type PublicUser = Omit<User, "passwordHash"> & { isPro: boolean };
+export type PublicUser = Omit<User, "passwordHash"> & { isPaying: boolean };
 
+/** One completed questionnaire. The result page is recomputed from the answers. */
 export type Generation = {
   id: string;
   userId: string;
-  productName: string;
-  summary: string;
-  answers: Record<string, string | string[]>;
-  createdAt: string;
-};
-
-export type Review = {
-  id: string;
-  userId: string;
-  authorName: string;
-  rating: number;
-  body: string;
-  approved: boolean;
+  answers: Answers;
   createdAt: string;
 };
 
 export function toPublicUser(u: User): PublicUser {
   const { passwordHash: _ignored, ...rest } = u;
-  return { ...rest, isPro: hasActivePlan(u) };
+  return { ...rest, isPaying: hasActivePlan(u) };
 }
 
 export function hasActivePlan(u: Pick<User, "plan" | "planExpiresAt">): boolean {
   if (u.plan === "free") return false;
   if (!u.planExpiresAt) return true;
   return new Date(u.planExpiresAt).getTime() > Date.now();
+}
+
+/** The plan that actually applies today: an expired subscription falls back to free. */
+export function effectivePlan(u: Pick<User, "plan" | "planExpiresAt">): Plan {
+  return hasActivePlan(u) ? u.plan : "free";
 }

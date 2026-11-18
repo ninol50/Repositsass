@@ -8,11 +8,11 @@
 
 type Entry = { count: number; resetAt: number };
 
-const globalBuckets = globalThis as unknown as { __repositsaas_rl?: Map<string, Entry> };
+const globalBuckets = globalThis as unknown as { __scalebiz_rl?: Map<string, Entry> };
 
 function buckets(): Map<string, Entry> {
-  if (!globalBuckets.__repositsaas_rl) globalBuckets.__repositsaas_rl = new Map();
-  return globalBuckets.__repositsaas_rl;
+  if (!globalBuckets.__scalebiz_rl) globalBuckets.__scalebiz_rl = new Map();
+  return globalBuckets.__scalebiz_rl;
 }
 
 export type RateResult = { ok: true } | { ok: false; retryAfter: number };

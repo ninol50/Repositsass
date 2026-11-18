@@ -22,36 +22,35 @@ const mono = JetBrains_Mono({
   display: "swap",
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://repositsaas.vercel.app";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://scalebiz.vercel.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "RepositSaaS — Transforme ton idée en brief prêt pour Claude Code",
-    template: "%s · RepositSaaS",
+    default: "ScaleBiz — Trouve le business fait pour toi",
+    template: "%s · ScaleBiz",
   },
   description:
-    "Réponds à une vingtaine de questions sur ton idée de SaaS, ton design et ton objectif de revenus. RepositSaaS génère un brief de construction complet, à coller dans Claude Code.",
-  keywords: ["SaaS", "générateur d'idées", "Claude Code", "prompt", "MVP", "indie hacker"],
+    "Réponds à 3 questions — ton âge, ton temps disponible, ton objectif par mois — et ScaleBiz te propose 5 business classés selon ton profil.",
+  keywords: ["business", "idée de business", "revenu en ligne", "entrepreneur", "side business"],
   openGraph: {
     type: "website",
     locale: "fr_FR",
     url: siteUrl,
-    siteName: "RepositSaaS",
-    title: "RepositSaaS — Ton idée de SaaS, transformée en brief de construction",
-    description:
-      "Un questionnaire guidé, un brief complet : positionnement, design system, architecture, pricing chiffré et plan d'exécution.",
+    siteName: "ScaleBiz",
+    title: "ScaleBiz — Trouve le business fait pour toi",
+    description: "3 questions, 5 business classés selon ton temps et ton objectif de revenu.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "RepositSaaS",
-    description: "Ton idée de SaaS, transformée en brief prêt pour Claude Code.",
+    title: "ScaleBiz",
+    description: "3 questions, 5 business classés selon ton temps et ton objectif de revenu.",
   },
   robots: { index: true, follow: true },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#07070b",
+  themeColor: "#060807",
   colorScheme: "dark",
 };
 

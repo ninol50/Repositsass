@@ -14,7 +14,7 @@ import { toPublicUser, type PublicUser, type User } from "./types";
 
 const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number) => Promise<Buffer>;
 
-export const SESSION_COOKIE = "rs_session";
+export const SESSION_COOKIE = "sb_session";
 const SESSION_DAYS = 30;
 
 export const AUTH_SECRET_MISSING =
@@ -82,7 +82,7 @@ export async function createSessionToken(userId: string): Promise<string> {
   return new SignJWT({ sub: userId })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setIssuer("repositsaas")
+    .setIssuer("scalebiz")
     .setExpirationTime(`${SESSION_DAYS}d`)
     .sign(key);
 }
@@ -91,7 +91,7 @@ export async function readSessionToken(token: string): Promise<string | null> {
   const key = secretKey();
   if (!key) return null;
   try {
-    const { payload } = await jwtVerify(token, key, { issuer: "repositsaas" });
+    const { payload } = await jwtVerify(token, key, { issuer: "scalebiz" });
     return typeof payload.sub === "string" ? payload.sub : null;
   } catch {
     return null;

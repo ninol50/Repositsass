@@ -12,14 +12,14 @@ export default function NotFound() {
         Cette page n&apos;existe pas
       </h1>
       <p className="mt-3 max-w-sm text-[14px] leading-relaxed text-ink-400">
-        Le lien est peut-être périmé, ou ce brief appartient à un autre compte.
+        Le lien est peut-être périmé, ou ce plan appartient à un autre compte.
       </p>
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
         <ButtonLink href="/" variant="outline">
           Retour à l&apos;accueil
         </ButtonLink>
-        <ButtonLink href="/brief" variant="brand">
-          Générer un brief
+        <ButtonLink href="/#questionnaire" variant="brand">
+          Faire le questionnaire
         </ButtonLink>
       </div>
     </main>

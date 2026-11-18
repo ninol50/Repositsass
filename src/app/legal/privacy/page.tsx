@@ -3,7 +3,7 @@ import { LegalPage, LegalSection, Placeholder } from "@/components/LegalPage";
 
 export const metadata: Metadata = {
   title: "Politique de confidentialité",
-  description: "Quelles données RepositSaaS collecte, pourquoi, et pendant combien de temps.",
+  description: "Quelles données ScaleBiz collecte, pourquoi, et pendant combien de temps.",
 };
 
 export default function PrivacyPage() {
@@ -27,24 +27,21 @@ export default function PrivacyPage() {
             (hachée avec scrypt et un sel unique — le mot de passe en clair n&apos;est jamais stocké).
           </li>
           <li>
-            <strong className="text-white">Contenu :</strong> les réponses au questionnaire et les briefs
-            générés, conservés pour que tu puisses les rouvrir.
+            <strong className="text-white">Contenu :</strong> tes réponses au questionnaire (âge, temps
+            disponible par jour, objectif de revenu mensuel), conservées pour que tu puisses rouvrir tes
+            plans.
           </li>
           <li>
-            <strong className="text-white">Paiement :</strong> identifiant d&apos;abonnement et statut du
-            plan transmis par Whop. Aucune donnée bancaire ne transite par nos serveurs.
-          </li>
-          <li>
-            <strong className="text-white">Avis :</strong> le nom d&apos;affichage et le texte que tu
-            publies volontairement.
+            <strong className="text-white">Offre :</strong> l&apos;offre active sur ton compte et sa date de
+            fin. Aucune donnée bancaire ne transite par nos serveurs.
           </li>
         </ul>
       </LegalSection>
 
       <LegalSection title="Ce que nous ne faisons pas">
         <p>
-          Tes idées ne sont envoyées à aucun fournisseur de modèle d&apos;IA : la génération est
-          entièrement locale à notre serveur et déterministe. Nous ne vendons pas tes données et nous ne
+          Tes réponses ne sont envoyées à aucun service tiers : le calcul de ton plan est fait sur notre
+          serveur, par des règles fixes. Nous ne vendons pas tes données et nous ne
           les utilisons pas pour entraîner quoi que ce soit.
         </p>
       </LegalSection>
@@ -52,15 +49,14 @@ export default function PrivacyPage() {
       <LegalSection title="Bases légales">
         <p>
           Exécution du contrat (fourniture du service et gestion de l&apos;abonnement), intérêt légitime
-          (sécurité du service, prévention de la fraude), consentement (publication d&apos;un avis).
+          (sécurité du service, prévention de la fraude).
         </p>
       </LegalSection>
 
       <LegalSection title="Durées de conservation">
         <p>
-          Compte et briefs : tant que le compte existe, puis 30 jours après la demande de suppression.
-          Données de facturation : conservées selon la durée légale applicable. Avis publiés : jusqu&apos;à
-          leur retrait à ta demande.
+          Compte et plans générés : tant que le compte existe, puis 30 jours après la demande de
+          suppression. Données de facturation : conservées selon la durée légale applicable.
         </p>
       </LegalSection>
 
@@ -68,7 +64,7 @@ export default function PrivacyPage() {
         <ul className="list-disc space-y-2 pl-5">
           <li>Hébergement de l&apos;application : <Placeholder>[Vercel ou ton hébergeur]</Placeholder></li>
           <li>Base de données : <Placeholder>[Neon, Vercel Postgres, ...]</Placeholder></li>
-          <li>Paiement : Whop</li>
+          <li>Paiement : <Placeholder>[prestataire de paiement, à définir]</Placeholder></li>
         </ul>
       </LegalSection>
 
