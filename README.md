@@ -39,8 +39,10 @@ Un visiteur déjà connecté passe la pause sans s'arrêter.
 | Automatisations | non | faites à ta place |
 | Guides | le plan et son guide | plus complets, plus de pages |
 
-Chaque carte liste les mêmes lignes (`FEATURES`) : ✅ en gras ce qui est inclus, 🚫 grisé
-ce qui ne l'est pas. L'annuel vaut 10 mois (« 2 mois offerts ») ; le prix de lancement ne
+Chaque carte liste les mêmes lignes (`FEATURES`) : Automatisation incluse, le plan complet
+et son guide, tous les guides et tous les plans. ✅ en gras ce qui est inclus, 🚫 grisé ce
+qui ne l'est pas — sauf sur l'offre recommandée après le questionnaire, qui n'affiche que
+ses ✅. Le nom du business (Clipping pour Starter) n'apparaît pas dans les offres. L'annuel vaut 10 mois (« 2 mois offerts ») ; le prix de lancement ne
 s'applique qu'au mensuel.
 
 **Sans offre, rien n'est visible** : la page résultat ne montre qu'un cadenas et l'offre.

@@ -23,7 +23,7 @@ const FAQ = [
   },
   {
     q: "Quelle différence entre Starter et Pro ?",
-    a: "Starter (26 € par mois) : le Clipping, le business le plus simple pour démarrer, avec son plan complet et son guide, pour 1 questionnaire. Pro (45 € par mois) : tous les business, des questionnaires illimités, les automatisations faites à ta place et des guides plus complets. Juste après ton questionnaire, le premier mois est à 22 € ou 39,99 € pendant quelques minutes. Tu peux aussi payer à l'année : 260 € ou 450 €, soit 2 mois offerts.",
+    a: "Starter (26 € par mois) : le plan complet de ton business et son guide. Pro (45 € par mois) : l'automatisation incluse, le plan complet de ton business et son guide, et tous les guides et tous les plans de tous nos business. Juste après ton questionnaire, le premier mois est à 22 € ou 39,99 € pendant quelques minutes. Tu peux aussi payer à l'année : 260 € ou 450 €, soit 2 mois offerts.",
   },
   {
     q: "Est-ce que ScaleBiz garantit un revenu ?",

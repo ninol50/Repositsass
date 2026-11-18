@@ -36,7 +36,7 @@ export const OFFERS: PlanOffer[] = [
   {
     id: "starter",
     name: "Starter",
-    tagline: "Pour démarrer avec le business le plus simple.",
+    tagline: "Pour démarrer simplement, à ton rythme.",
     monthlyPrice: 26,
     launchPrice: 22,
     yearlyPrice: 260,
@@ -44,9 +44,7 @@ export const OFFERS: PlanOffer[] = [
     questionnaires: 1,
     automations: false,
     perks: [
-      "Le Clipping : le business le plus simple pour démarrer",
-      "Son plan complet et son guide pas à pas",
-      "1 questionnaire",
+      "Le plan complet de ton business et son guide",
     ],
   },
   {
@@ -60,10 +58,9 @@ export const OFFERS: PlanOffer[] = [
     questionnaires: null,
     automations: true,
     perks: [
-      "Tous les business débloqués",
-      "Questionnaires illimités",
-      "Les automatisations, faites à ta place",
-      "Des guides plus complets, avec plus de pages",
+      "Automatisation incluse",
+      "Le plan complet de ton business et son guide",
+      "Tous les guides et tous les plans de tous nos business",
     ],
   },
 ];
@@ -83,11 +80,9 @@ export function monthsOffered(offer: PlanOffer): number {
  * A string replaces the label for that offer (e.g. a limit).
  */
 export const FEATURES: { label: string; starter: boolean | string; pro: boolean | string }[] = [
-  { label: "Le Clipping, son plan complet et son guide", starter: true, pro: true },
-  { label: "Tous les business débloqués", starter: false, pro: true },
-  { label: "Questionnaires illimités", starter: "1 seul questionnaire", pro: true },
-  { label: "Les automatisations, faites à ta place", starter: false, pro: true },
-  { label: "Des guides plus complets, avec plus de pages", starter: false, pro: true },
+  { label: "Automatisation incluse", starter: false, pro: true },
+  { label: "Le plan complet de ton business et son guide", starter: true, pro: true },
+  { label: "Tous les guides et tous les plans de tous nos business", starter: false, pro: true },
 ];
 
 /** One line of an offer's checklist. A limit counts as included, with its own wording. */
@@ -181,7 +176,7 @@ export function recommendedOffer(a: Answers): { offer: PlanOffer; reason: string
   if (!a.automate && profile.ambition === "accessible" && a.monthlyTarget <= STARTER_MAX_TARGET) {
     return {
       offer: pick("starter"),
-      reason: "Ton objectif est atteignable seul : le Clipping, son plan et son guide pour démarrer simplement.",
+      reason: "Ton objectif est atteignable seul : ton plan complet et son guide pour démarrer simplement.",
     };
   }
 
@@ -192,7 +187,7 @@ export function recommendedOffer(a: Answers): { offer: PlanOffer; reason: string
   } else if (profile.ambition === "tres-ambitieux") {
     reason = "Ton objectif est élevé : tous les business et les automatisations pour y arriver plus vite.";
   } else if ((a.experience ?? 0) === 0) {
-    reason = "Tu débutes : des guides plus complets et l'automatisation à ta place pour ne pas te perdre.";
+    reason = "Tu débutes : tous nos guides et l'automatisation à ta place pour ne pas te perdre.";
   } else if (a.hoursPerDay <= 2) {
     reason = `Avec ${a.hoursPerDay} h par jour, il faut que ça tourne sans toi : Pro automatise à ta place.`;
   }

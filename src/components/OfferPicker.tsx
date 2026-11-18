@@ -35,6 +35,7 @@ export function OfferPicker({
         <OfferCard
           offer={recommended}
           billing={billing}
+          hideMissing
           promo={promo}
           featured
           badge={recommended.id === BEST_VALUE ? "Recommandé pour ton plan · le plus avantageux" : "Recommandé pour ton plan"}

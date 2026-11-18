@@ -16,11 +16,21 @@ import { PlanButton } from "./PlanButton";
 import { cx } from "./ui";
 
 /** ✅ included (bold) / 🚫 not included (dimmed), the same lines on every offer. */
-export function FeatureList({ offer, className }: { offer: PlanOffer; className?: string }) {
+export function FeatureList({
+  offer,
+  className,
+  hideMissing = false,
+}: {
+  offer: PlanOffer;
+  className?: string;
+  /** The offer recommended to this person: show only what it includes. */
+  hideMissing?: boolean;
+}) {
   return (
     <ul className={cx("space-y-2.5", className)}>
       {FEATURES.map((f) => {
         const { included, label } = featureFor(offer, f);
+        if (hideMissing && !included) return null;
         return (
           <li
             key={f.label}
@@ -128,8 +138,10 @@ export function OfferCard({
   featured = false,
   badge,
   launchNote = false,
+  hideMissing = false,
 }: {
   offer: PlanOffer;
+  hideMissing?: boolean;
   billing?: Billing;
   /** True only while a just-generated plan's launch price is still running. */
   promo?: boolean;
@@ -159,7 +171,7 @@ export function OfferCard({
 
       <Price offer={offer} billing={billing} promo={promo} launchNote={launchNote} />
 
-      <FeatureList offer={offer} className="mt-5 flex-1" />
+      <FeatureList offer={offer} className="mt-5 flex-1" hideMissing={hideMissing} />
 
       <div className="mt-6">
         <PlanButton

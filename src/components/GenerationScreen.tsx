@@ -288,7 +288,7 @@ export function GenerationScreen({
                 >
                   Découvrir les autres offres
                 </Link>
-                <FeatureList offer={recommended.offer} className="mt-4 border-t border-white/10 pt-4" />
+                <FeatureList offer={recommended.offer} hideMissing className="mt-4 border-t border-white/10 pt-4" />
               </div>
 
             </div>
