@@ -82,7 +82,10 @@ export function BusinessCard(props: BusinessCardProps) {
         ))}
       </dl>
 
-      <ol className="mt-4 space-y-1.5">
+      <p className="mt-5 text-[11.5px] font-semibold uppercase tracking-[0.14em] text-ink-400">
+        La méthode, sans automatisation
+      </p>
+      <ol className="mt-2 space-y-1.5">
         {b.steps.map((step, i) => (
           <li key={step} className="flex gap-2.5 text-[13px] text-ink-200">
             <span className="font-mono text-brand-400">{i + 1}.</span>
@@ -90,6 +93,21 @@ export function BusinessCard(props: BusinessCardProps) {
           </li>
         ))}
       </ol>
+
+      <div className="mt-4 rounded-xl border border-white/[0.08] bg-ink-950/60 p-3">
+        <p className="flex items-center justify-between gap-2 text-[12.5px] font-semibold text-white">
+          ⚡ Avec l&apos;automatisation
+          <span
+            className={cx(
+              "rounded-full border px-2 py-0.5 text-[11px] font-medium",
+              b.automation.available ? "border-brand-400/40 text-brand-200" : "border-gold-400/40 text-gold-300",
+            )}
+          >
+            {b.automation.available ? "Disponible" : "Bientôt disponible"}
+          </span>
+        </p>
+        <p className="mt-1 text-[12.5px] text-ink-400">{b.automation.summary}</p>
+      </div>
     </div>
   );
 }

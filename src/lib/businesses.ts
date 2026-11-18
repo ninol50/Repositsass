@@ -1,9 +1,9 @@
 /**
  * The five businesses ScaleBiz proposes.
  *
- * ⚠ CONTENT TO WRITE: the five entries below are empty slots. Fill in the
- * real names, descriptions and steps here — nothing else in the app needs to
- * change. The numeric fields drive the matching score, so set them honestly.
+ * Written so far: n°1 Clipping. Slots n°2–n°5 are still placeholders: fill
+ * them in here — nothing else in the app needs to change. The numeric fields
+ * drive the matching score, so set them honestly.
  *
  * Locked businesses never leave the server: the result page only serialises
  * `rank` and `fit` for them, not a single word of this content.
@@ -27,11 +27,45 @@ export type Business = {
   minAge: number;
   /** Years of business experience it realistically needs. 0 = beginner-friendly. */
   minExperience: number;
-  /** Launch plan, in order. */
+  /** Launch plan without automation, in order. */
   steps: string[];
+  /**
+   * The done-for-you version. `available: false` shows "bientôt disponible"
+   * until it exists — never promise an automation that is not built.
+   */
+  automation: { available: boolean; summary: string };
 };
 
-export const BUSINESSES: Business[] = [1, 2, 3, 4, 5].map((n) => ({
+/** Business n°1 — the smallest start: least money, least time. */
+const CLIPPING: Business = {
+  id: "clipping",
+  name: "Clipping",
+  tagline: "Découpe les vidéos des créateurs en clips courts, et fais-toi payer.",
+  description:
+    "Les créateurs (YouTubeurs, podcasteurs, streamers, sites et marques qui font des vidéos) n'ont pas le temps " +
+    "de transformer leurs longues vidéos en clips TikTok. Tu le fais pour eux : tu découpes les meilleurs moments, " +
+    "tu les publies, et ils te paient au clip ou au mois.",
+  minHoursPerDay: 1,
+  revenueRange: [300, 1500],
+  startBudget: 0,
+  minAge: 16,
+  minExperience: 0,
+  steps: [
+    "Crée un compte TikTok dédié au clipping, sur une niche claire (podcasts, business, gaming…).",
+    "Publie 5 à 10 clips d'exemple pour montrer ton niveau (montage gratuit sur CapCut).",
+    "Fais la liste des créateurs et des sites qui publient des vidéos longues sans clips courts.",
+    "Envoie-leur un message : propose 3 clips gratuits pour tester.",
+    "Livre les clips en 48 h, puis propose un forfait au mois.",
+    "Garde les clients qui paient le mieux et monte tes prix.",
+  ],
+  automation: {
+    available: false,
+    summary: "Recherche des créateurs, messages et découpe des clips faits à ta place.",
+  },
+};
+
+/** Slots still to write: n°2 to n°5. */
+const PLACEHOLDERS: Business[] = [2, 3, 4, 5].map((n) => ({
   id: `business-${n}`,
   name: `Business n°${n}`,
   tagline: "À définir",
@@ -42,7 +76,10 @@ export const BUSINESSES: Business[] = [1, 2, 3, 4, 5].map((n) => ({
   minAge: 18,
   minExperience: 0,
   steps: ["Étape 1 à rédiger", "Étape 2 à rédiger", "Étape 3 à rédiger"],
+  automation: { available: false, summary: "À définir" },
 }));
+
+export const BUSINESSES: Business[] = [CLIPPING, ...PLACEHOLDERS];
 
 export type RankedBusiness = {
   business: Business;
