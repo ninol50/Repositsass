@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 export function MobileNav({
   links,
@@ -11,6 +12,8 @@ export function MobileNav({
   signedIn: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -44,15 +47,19 @@ export function MobileNav({
         </span>
       </button>
 
-      {open && (
-        <div className="fixed inset-x-0 top-16 bottom-0 z-40 bg-ink-950/97 px-5 py-6 backdrop-blur-xl">
+      {/* Rendered into <body>: the header's backdrop blur would otherwise trap
+          this fixed panel inside the 64px header, with no background. */}
+      {open &&
+        mounted &&
+        createPortal(
+        <div className="fixed inset-x-0 top-16 bottom-0 z-[60] overflow-y-auto border-t border-white/[0.08] bg-ink-950 px-5 py-6">
           <nav className="flex flex-col gap-1">
             {links.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
                 onClick={() => setOpen(false)}
-                className="rounded-xl px-3 py-3.5 text-[15px] text-ink-200 hover:bg-white/[0.05] hover:text-white"
+                className="rounded-xl px-3 py-4 text-[17px] font-semibold text-white hover:bg-white/[0.06]"
               >
                 {l.label}
               </Link>
@@ -64,7 +71,7 @@ export function MobileNav({
                 <Link
                   href="/dashboard"
                   onClick={() => setOpen(false)}
-                  className="rounded-xl bg-white px-4 py-3.5 text-center text-[15px] font-medium text-ink-950"
+                  className="rounded-xl bg-[linear-gradient(120deg,#34d399,#10b981)] px-4 py-4 text-center text-[16px] font-bold text-ink-950"
                 >
                   Mon espace
                 </Link>
@@ -74,22 +81,23 @@ export function MobileNav({
                 <Link
                   href="/login"
                   onClick={() => setOpen(false)}
-                  className="rounded-xl border border-white/12 px-4 py-3.5 text-center text-[15px] text-white"
+                  className="rounded-xl border border-white/20 px-4 py-4 text-center text-[16px] font-semibold text-white"
                 >
                   Connexion
                 </Link>
                 <Link
                   href="/#questionnaire"
                   onClick={() => setOpen(false)}
-                  className="rounded-xl bg-white px-4 py-3.5 text-center text-[15px] font-medium text-ink-950"
+                  className="rounded-xl bg-[linear-gradient(120deg,#34d399,#10b981)] px-4 py-4 text-center text-[16px] font-bold text-ink-950"
                 >
                   Commencer
                 </Link>
               </>
             )}
           </div>
-        </div>
-      )}
+        </div>,
+          document.body,
+        )}
     </div>
   );
 }
