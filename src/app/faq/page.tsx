@@ -19,11 +19,11 @@ const FAQ = [
   },
   {
     q: "Qu'est-ce qui est gratuit ?",
-    a: "Le questionnaire, la création de compte et ton profil chiffré (heures par mois, taux horaire à atteindre, niveau d'ambition). Les business eux-mêmes se débloquent avec une offre.",
+    a: "Le questionnaire et la création de compte. Ton plan, lui, se débloque avec une offre : sans offre, il reste verrouillé.",
   },
   {
     q: "Quelle différence entre Starter, Pro et Elite ?",
-    a: "Le nombre de business débloqués : 1 avec Starter, 3 avec Pro, les 5 avec Elite. Les mieux classés pour toi sont toujours débloqués en premier.",
+    a: "Starter : le plan complet de ton business et sa fiche, 1 automatisation avec son guide, 3 guides par mois et les outils pour la mise en place. Pro : tout Starter, l'automatisation faite à ta place, 10 guides par mois et 2 business en plus. Elite : tous les business, tout automatisé à ta place, les meilleurs outils et 20 guides complets par business.",
   },
   {
     q: "Est-ce que ScaleBiz garantit un revenu ?",

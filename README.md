@@ -29,19 +29,29 @@ Un visiteur déjà connecté passe la pause sans s'arrêter.
 
 ## Les offres (`src/lib/plans.ts`)
 
-| | Gratuit | Starter | Pro | Elite |
-| --- | --- | --- | --- | --- |
-| Prix | 0 € | 19 € / mois | 39 € / mois | 79 € / mois |
-| Business débloqués | 0 | 1 | 3 | 5 |
+| | Starter | Pro | Elite |
+| --- | --- | --- | --- |
+| Prix | 19 € / mois | 39 € / mois | 79 € / mois |
+| Plans de business | 1 | 3 | tous (5) |
+| Guides | 3 / mois | 10 / mois | 20 complets par business |
+| Automatisation | 1, avec son guide | faite à ta place | tout, à ta place |
+| Outils | pour la mise en place | idem | tous les meilleurs |
 
-Les prix et les avantages sont **provisoires** : une ligne à changer dans
-`src/lib/plans.ts`. Les business les mieux classés pour la personne sont toujours
-débloqués en premier.
+**Sans offre, rien n'est visible** : la page résultat ne montre qu'un cadenas et l'offre.
 
-**Le paiement n'est pas branché.** Le bouton « Choisir » le dit clairement au lieu de
-faire semblant. En attendant, une offre s'accorde à la main depuis **`/admin`**
-(colonne « Offre »), ce qui permet de tester les déblocages. Le seul composant à
-changer quand le paiement arrivera : `src/components/PlanButton.tsx`.
+**Après la génération, une seule offre est proposée**, celle qui correspond au plan
+(`recommendedOffer`) : automatisation voulue + objectif très élevé → Elite ;
+automatisation voulue → Pro ; objectif très élevé sans automatisation → Pro ; sinon
+Starter. Le bouton « Découvrir les autres offres » montre les deux autres.
+
+**Offre de lancement** (`PROMO`) : -30 % le premier mois pendant 5 minutes après la
+génération. Le compte à rebours est réel (calculé par le serveur, il ne repart pas au
+rafraîchissement) : un faux minuteur est une pratique commerciale trompeuse. Quand
+le paiement sera branché, il doit appliquer la remise uniquement tant que
+`promoActive()` est vrai.
+
+**Le paiement n'est pas branché.** En attendant, une offre s'accorde à la main depuis
+**`/admin`** (colonne « Offre »).
 
 ## Les 5 business (`src/lib/businesses.ts`)
 

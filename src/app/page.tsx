@@ -11,8 +11,8 @@ export const dynamic = "force-dynamic";
 const STEPS = [
   {
     n: "01",
-    title: "Tu réponds à 4 questions",
-    text: "Ton âge, ton expérience, le temps que tu as chaque jour et ton objectif. 30 secondes.",
+    title: "Tu réponds à quelques questions",
+    text: "Ton âge, ton expérience, ton temps, ton objectif, et si tu veux qu'on automatise tout. 30 secondes.",
   },
   {
     n: "02",
@@ -21,8 +21,8 @@ const STEPS = [
   },
   {
     n: "03",
-    title: "Tu reçois tes 5 business",
-    text: "Classés du plus adapté au moins adapté à ton profil, avec un plan de lancement pour chacun.",
+    title: "Tu débloques ton plan",
+    text: "Ton business, sa fiche, ton plan d'action, tes guides et tes automatisations, selon ton offre.",
   },
 ];
 
@@ -86,8 +86,8 @@ export default async function HomePage() {
           <div className="mx-auto w-full max-w-6xl px-5">
             <SectionHeading
               eyebrow="Offres"
-              title="Débloque tes business"
-              description="Le questionnaire et ton profil chiffré sont gratuits. Les business se débloquent selon ton offre."
+              title="Débloque ton plan"
+              description="Le questionnaire est gratuit. Ton plan, tes guides et tes automatisations se débloquent avec ton offre."
             />
             <div className="mt-12">
               <PricingCards />

@@ -23,7 +23,7 @@ export default async function PricingPage() {
         <SectionHeading
           eyebrow="Offres"
           title="Choisis jusqu'où tu veux aller"
-          description="Le questionnaire et ton profil chiffré restent gratuits. Chaque offre débloque une partie de tes 5 business, toujours les plus adaptés en premier."
+          description="Le questionnaire est gratuit. Chaque offre débloque ton plan, tes guides et tes automatisations."
         />
         <div className="mt-12">
           <PricingCards currentPlan={user ? effectivePlan(user) : undefined} />

@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     template: "%s · ScaleBiz",
   },
   description:
-    "Réponds à 4 questions — ton âge, ton expérience, ton temps disponible, ton objectif — et ScaleBiz te propose 5 business classés selon ton profil.",
+    "Réponds à quelques questions et ScaleBiz construit le plan du business fait pour toi, avec guides et automatisations.",
   keywords: ["business", "idée de business", "revenu en ligne", "entrepreneur", "side business"],
   openGraph: {
     type: "website",
@@ -39,12 +39,12 @@ export const metadata: Metadata = {
     url: siteUrl,
     siteName: "ScaleBiz",
     title: "ScaleBiz — Trouve le business fait pour toi",
-    description: "4 questions, 5 business classés selon ton temps et ton objectif de revenu.",
+    description: "Quelques questions, et le plan du business fait pour toi, avec guides et automatisations.",
   },
   twitter: {
     card: "summary_large_image",
     title: "ScaleBiz",
-    description: "4 questions, 5 business classés selon ton temps et ton objectif de revenu.",
+    description: "Quelques questions, et le plan du business fait pour toi, avec guides et automatisations.",
   },
   robots: { index: true, follow: true },
 };

@@ -2,7 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CONSENT_TEXT, OATH_TEXT, QUESTIONS, questionError, type Answers, type QuestionId } from "@/lib/questions";
+import {
+  CONSENT_TEXT,
+  OATH_TEXT,
+  QUESTIONS,
+  questionError,
+  type Answers,
+  type Question,
+  type QuestionId,
+} from "@/lib/questions";
 import { AuthForm } from "./AuthForm";
 import { Fingerprint } from "./Fingerprint";
 import { GenerationScreen, type ScreenPhase } from "./GenerationScreen";
@@ -27,7 +35,7 @@ const PAUSE_AT = 62;
 type Result = { id: string; promoEndsAt: string };
 
 type Saved = {
-  values: Partial<Record<QuestionId, number>>;
+  values: Values;
   step: number;
   phase: Phase;
   consent: boolean;
@@ -62,10 +70,19 @@ function clearSaved() {
 
 const SCREEN_PHASES: Phase[] = ["working", "auth", "finishing", "locked"];
 
+type Values = Partial<Record<QuestionId, number | boolean>>;
+
+/** What the number field shows when arriving on question `q`. */
+function draftFor(q: Question, values: Values): string {
+  if (q.kind !== "number") return "";
+  const v = values[q.id];
+  return String(typeof v === "number" ? v : q.defaultValue);
+}
+
 export function Onboarding({ signedIn }: { signedIn: boolean }) {
   const router = useRouter();
-  const [values, setValues] = useState<Partial<Record<QuestionId, number>>>({});
-  const [draft, setDraft] = useState<string>(String(QUESTIONS[0].defaultValue));
+  const [values, setValues] = useState<Values>({});
+  const [draft, setDraft] = useState<string>(draftFor(QUESTIONS[0], {}));
   const [step, setStep] = useState(0);
   const [phase, setPhase] = useState<Phase>("questions");
   const [consent, setConsent] = useState(false);
@@ -91,7 +108,7 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
     setOath(saved.oath);
     const s = Math.min(saved.step, QUESTIONS.length - 1);
     setStep(s);
-    setDraft(String(saved.values[QUESTIONS[s].id] ?? QUESTIONS[s].defaultValue));
+    setDraft(draftFor(QUESTIONS[s], saved.values));
 
     if (saved.result) {
       setResult(saved.result);
@@ -190,6 +207,7 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
   /* ----------------------------- actions ----------------------------- */
 
   function commit(raw: string): number | null {
+    if (question.kind !== "number") return null;
     const cleaned = raw.replace(/\s/g, "").replace(",", ".");
     const n = cleaned === "" ? null : Number(cleaned);
     const err = questionError(question, n);
@@ -201,13 +219,17 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
     e?.preventDefault();
     const n = commit(draft);
     if (n === null) return;
-    const updated = { ...values, [question.id]: n };
+    advance({ ...values, [question.id]: n });
+  }
+
+  /** Stores an answer and moves to the next question, or to the consent step. */
+  function advance(updated: Values) {
     setValues(updated);
 
     if (step < QUESTIONS.length - 1) {
       const s = step + 1;
       setStep(s);
-      setDraft(String(updated[QUESTIONS[s].id] ?? QUESTIONS[s].defaultValue));
+      setDraft(draftFor(QUESTIONS[s], updated));
       writeSaved({ values: updated, step: s, phase: "questions", consent, oath, result: null });
       return;
     }
@@ -222,10 +244,11 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
     if (step === 0) return;
     const s = step - 1;
     setStep(s);
-    setDraft(String(values[QUESTIONS[s].id] ?? QUESTIONS[s].defaultValue));
+    setDraft(draftFor(QUESTIONS[s], values));
   }
 
   function nudge(delta: number) {
+    if (question.kind !== "number") return;
     const current = Number(draft.replace(/\s/g, ""));
     const base = Number.isFinite(current) ? current : question.defaultValue;
     const n = Math.min(question.max, Math.max(question.min, base + delta * question.step));
@@ -371,6 +394,46 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
             Créer mon business de A à Z →
           </button>
         </div>
+      </div>
+    );
+  }
+
+  if (question.kind === "choice") {
+    const chosen = values[question.id];
+    return (
+      <div className="surface p-6 sm:p-8">
+        <div key={question.id} className="animate-rise">
+          <h2 className="font-display text-[24px] font-semibold leading-tight tracking-tight text-white sm:text-[28px]">
+            {question.title}
+          </h2>
+          {question.hint && <p className="mt-2 text-[13.5px] leading-relaxed text-ink-400">{question.hint}</p>}
+
+          <div className="mt-6 grid gap-3">
+            {question.options.map((o) => (
+              <button
+                key={String(o.value)}
+                type="button"
+                onClick={() => advance({ ...values, [question.id]: o.value })}
+                className={cx(
+                  "flex items-center gap-4 rounded-2xl border p-5 text-left transition-colors",
+                  chosen === o.value
+                    ? "border-brand-400/60 bg-brand-500/10"
+                    : "border-white/10 bg-white/[0.02] hover:border-brand-400/40 hover:bg-white/[0.04]",
+                )}
+              >
+                <span className="text-[30px] leading-none" aria-hidden>
+                  {o.emoji}
+                </span>
+                <span>
+                  <span className="block text-[17px] font-semibold text-white">{o.label}</span>
+                  <span className="mt-0.5 block text-[13.5px] text-ink-400">{o.detail}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-6">{backButton}</div>
       </div>
     );
   }

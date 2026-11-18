@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { PROMO } from "@/lib/plans";
+import { PROMO, formatPrice, promoPrice, recommendedOffer } from "@/lib/plans";
 import { computeProfile, euros } from "@/lib/profile";
 import type { Answers } from "@/lib/questions";
 import { LogoMark } from "./Logo";
@@ -22,6 +22,7 @@ function buildLines(a: Answers): Line[] {
     { at: 0, text: "$ scalebiz build --profil nouveau --mode a-z", tone: "accent" },
     { at: 2, text: "▸ initialisation du moteur v2.4 …", tone: "dim" },
     { at: 5, text: `▸ lecture des réponses : âge=${a.age} · expérience=${xp} an(s) · ${a.hoursPerDay} h/jour · objectif=${euros(a.monthlyTarget)}` },
+    { at: 7, text: `▸ automatisation demandée : ${a.automate ? "oui, tout à ta place" : "non, guides pas à pas"}` },
     { at: 9, text: "✓ réponses validées et filtrées", tone: "ok" },
     { at: 13, text: `▸ temps disponible : ${a.hoursPerDay} h × 21,7 jours = ${p.hoursPerMonth} h / mois` },
     { at: 18, text: `▸ taux horaire cible : ${euros(a.monthlyTarget)} ÷ ${p.hoursPerMonth} h = ${euros(p.requiredHourlyRate)} / h` },
@@ -75,6 +76,7 @@ export function GenerationScreen({
   onLeave: () => void;
 }) {
   const lines = useMemo(() => buildLines(answers), [answers]);
+  const recommended = useMemo(() => recommendedOffer(answers), [answers]);
   const visible = lines.filter((l) => l.at <= progress);
   const logRef = useRef<HTMLDivElement>(null);
   const locked = phase === "locked";
@@ -228,49 +230,73 @@ export function GenerationScreen({
 
         {/* The plan is found, and locked */}
         {locked && result && (
-          <div className="absolute inset-0 flex items-center justify-center overflow-y-auto bg-ink-950/60 p-4">
+          <div className="absolute inset-0 flex justify-center overflow-y-auto bg-ink-950/60 p-4">
             <div className="animate-siren pointer-events-none absolute inset-x-0 top-0 h-2 bg-[linear-gradient(90deg,#ef4444,#f59e0b,#ef4444)]" aria-hidden />
             <div className="animate-siren pointer-events-none absolute inset-x-0 bottom-0 h-2 bg-[linear-gradient(90deg,#f59e0b,#ef4444,#f59e0b)]" aria-hidden />
 
-            <div className="animate-alert animate-shake w-full max-w-lg rounded-3xl p-6 text-center sm:p-8">
-              <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-gold-400/40 bg-ink-950/90 text-gold-300 shadow-[0_0_40px_-4px_rgba(251,191,36,0.7)]">
-                <LockIcon size={28} />
+            <div className="animate-alert animate-shake my-auto w-full max-w-lg rounded-3xl p-5 text-center sm:p-8">
+              <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-gold-400/40 bg-ink-950/90 text-gold-300 shadow-[0_0_40px_-4px_rgba(251,191,36,0.7)]">
+                <LockIcon size={24} />
               </span>
 
-              <p className="mt-5 font-display text-[28px] font-bold leading-tight tracking-tight text-white sm:text-[36px]">
+              <p className="mt-4 font-display text-[25px] font-bold leading-tight tracking-tight text-white sm:text-[36px]">
                 ⚠️ On a trouvé ton plan ‼️‼️
               </p>
               <p className="mt-2 text-[15px] text-ink-200 sm:text-[16px]">
                 Débloque-le tout de suite avant de le perdre.
               </p>
 
-              <div className="mx-auto mt-6 w-fit rounded-2xl border border-white/10 bg-ink-950/90 px-6 py-4">
-                <p className="text-[12px] uppercase tracking-[0.16em] text-gold-300">
-                  Ton offre promo se termine dans
-                </p>
+              <div className="mx-auto mt-5 w-fit rounded-2xl border border-white/10 bg-ink-950/90 px-6 py-3">
+                <p className="text-[12px] uppercase tracking-[0.16em] text-gold-300">Ton offre promo se termine dans</p>
                 <PromoCountdown
                   endsAt={result.promoEndsAt}
-                  className="mt-1 block font-mono text-[44px] font-bold tabular-nums text-white"
+                  className="mt-0.5 block font-mono text-[34px] font-bold tabular-nums text-white sm:text-[40px]"
                 />
-                <p className="text-[13px] text-ink-300">
-                  -{PROMO.percentOff} % sur {PROMO.scope}
-                </p>
               </div>
 
-              <Link
-                href={`/result/${result.id}#offres`}
-                onClick={onLeave}
-                className="mt-6 flex h-14 w-full items-center justify-center rounded-2xl bg-[linear-gradient(120deg,#fbbf24,#f59e0b)] text-[16px] font-bold text-ink-950 shadow-[0_10px_40px_-10px_rgba(251,191,36,0.8)] transition-all hover:brightness-110 active:scale-[0.99]"
-              >
-                Débloquer mon plan maintenant
-              </Link>
-              <Link
-                href={`/result/${result.id}`}
-                onClick={onLeave}
-                className="mt-3 inline-block text-[13px] text-ink-300 underline underline-offset-4 hover:text-white"
-              >
-                Voir le résumé gratuit de mon profil
-              </Link>
+              {/* The one offer that fits this plan */}
+              <div className="mt-5 rounded-2xl border border-brand-400/40 bg-ink-950/90 p-5 text-left">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11.5px] font-semibold uppercase tracking-[0.14em] text-brand-300">
+                      Recommandé pour ton plan
+                    </p>
+                    <p className="mt-1 font-display text-[22px] font-bold text-white">{recommended.offer.name}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="whitespace-nowrap font-display text-[26px] font-bold leading-none text-white">
+                      {formatPrice(promoPrice(recommended.offer.monthlyPrice))}
+                    </p>
+                    <p className="mt-1 text-[12.5px] text-ink-500 line-through">{recommended.offer.monthlyPrice} € / mois</p>
+                  </div>
+                </div>
+                <p className="mt-1 text-[12.5px] font-medium text-gold-300">
+                  -{PROMO.percentOff} % sur {PROMO.scope}
+                </p>
+                <Link
+                  href={`/result/${result.id}#offres`}
+                  onClick={onLeave}
+                  className="mt-4 flex h-14 w-full items-center justify-center rounded-2xl bg-[linear-gradient(120deg,#fbbf24,#f59e0b)] text-[16px] font-bold text-ink-950 shadow-[0_10px_40px_-10px_rgba(251,191,36,0.8)] transition-all hover:brightness-110 active:scale-[0.99]"
+                >
+                  Débloquer avec {recommended.offer.name}
+                </Link>
+                <Link
+                  href={`/result/${result.id}?offres=toutes#offres`}
+                  onClick={onLeave}
+                  className="mt-3 flex h-11 w-full items-center justify-center rounded-xl border border-white/15 text-[14px] font-medium text-white transition-colors hover:border-white/30 hover:bg-white/[0.04]"
+                >
+                  Découvrir les autres offres
+                </Link>
+                <ul className="mt-4 space-y-1.5 border-t border-white/10 pt-4">
+                  {recommended.offer.perks.map((perk) => (
+                    <li key={perk} className="flex gap-2 text-[13px] leading-snug text-ink-200">
+                      <span className="text-brand-400">✓</span>
+                      {perk}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
             </div>
           </div>
         )}

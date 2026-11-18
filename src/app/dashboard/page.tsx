@@ -7,7 +7,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { ButtonLink } from "@/components/ui";
 import { currentUser } from "@/lib/auth";
 import { getStore } from "@/lib/db";
-import { TOTAL_BUSINESSES, businessesUnlockedFor, planLabel } from "@/lib/plans";
+import { planLabel } from "@/lib/plans";
 import { computeProfile, euros } from "@/lib/profile";
 import { effectivePlan } from "@/lib/types";
 
@@ -27,7 +27,6 @@ export default async function DashboardPage() {
   if (!user) redirect("/login?next=/dashboard");
 
   const plan = effectivePlan(user);
-  const unlocked = businessesUnlockedFor(plan);
   const generations = await getStore().listGenerations(user.id, 50);
 
   return (
@@ -39,8 +38,7 @@ export default async function DashboardPage() {
           <div>
             <h1 className="font-display text-[30px] font-semibold tracking-tight text-white sm:text-[36px]">Mon espace</h1>
             <p className="mt-2 text-[14px] text-ink-400">
-              {user.email} · offre <span className={plan === "free" ? "text-ink-300" : "text-brand-300"}>{planLabel(plan)}</span>{" "}
-              · {unlocked}/{TOTAL_BUSINESSES} business débloqués
+              {user.email} · <span className={plan === "free" ? "text-ink-300" : "text-brand-300"}>{planLabel(plan)}</span>
             </p>
           </div>
           <div className="flex gap-2">
@@ -54,7 +52,7 @@ export default async function DashboardPage() {
         {plan === "free" && (
           <div className="mt-8 flex flex-col gap-3 rounded-2xl border border-gold-400/25 bg-gold-400/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-[14px] text-ink-200">
-              Tes business sont verrouillés. Choisis une offre pour les débloquer.
+              Tes plans sont verrouillés. Choisis une offre pour les débloquer.
             </p>
             <ButtonLink href="/pricing" variant="outline" size="sm">
               Voir les offres
@@ -92,7 +90,8 @@ export default async function DashboardPage() {
                           Objectif {euros(g.answers.monthlyTarget)} / mois · {g.answers.hoursPerDay} h par jour
                         </p>
                         <p className="mt-0.5 text-[12.5px] text-ink-500">
-                          {formatDate(g.createdAt)} · {p.ambitionLabel} · {euros(p.requiredHourlyRate)} / h à atteindre
+                          {formatDate(g.createdAt)}
+                          {plan === "free" ? " · 🔒 verrouillé" : ` · ${p.ambitionLabel} · ${euros(p.requiredHourlyRate)} / h à atteindre`}
                         </p>
                       </div>
                       <span className="text-[13px] text-brand-300">Voir →</span>
