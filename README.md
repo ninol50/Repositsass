@@ -33,7 +33,7 @@ Un visiteur déjà connecté passe la pause sans s'arrêter.
 | --- | --- | --- |
 | Prix | 23 € / mois | 42 € / mois |
 | Prix de lancement (1er mois, 5 min après le questionnaire) | 17,99 € | 34,99 € |
-| Annuel (sélecteur, mensuel par défaut) | 230 € / an | 420 € / an |
+| Annuel (sélecteur, mensuel par défaut) | 180 € / an (-35 %) | 300 € / an (-40 %) |
 | Business | 1 : toujours le Clipping | tous |
 | Questionnaires | 1 (vérifié côté serveur) | illimités |
 | Automatisations | non | faites à ta place |
@@ -42,7 +42,7 @@ Un visiteur déjà connecté passe la pause sans s'arrêter.
 Chaque carte liste les mêmes lignes (`FEATURES`) : Automatisation incluse, le plan complet
 et son guide, tous les guides et tous les plans. ✅ en gras ce qui est inclus, 🚫 grisé ce
 qui ne l'est pas — sauf sur l'offre recommandée après le questionnaire, qui n'affiche que
-ses ✅. Le nom du business (Clipping pour Starter) n'apparaît pas dans les offres. L'annuel vaut 10 mois (« 2 mois offerts ») ; le prix de lancement ne
+ses ✅. Le nom du business (Clipping pour Starter) n'apparaît pas dans les offres. L'annuel est fixé dans `yearlyPrice` (la réduction affichée est calculée) ; le prix de lancement ne
 s'applique qu'au mensuel.
 
 **Sans offre, rien n'est visible** : la page résultat ne montre qu'un cadenas et l'offre.

@@ -39,7 +39,7 @@ export const OFFERS: PlanOffer[] = [
     tagline: "Pour démarrer simplement, à ton rythme.",
     monthlyPrice: 23,
     launchPrice: 17.99,
-    yearlyPrice: 230,
+    yearlyPrice: 180,
     businessPlans: 1,
     questionnaires: 1,
     automations: false,
@@ -53,7 +53,7 @@ export const OFFERS: PlanOffer[] = [
     tagline: "Tous les business, automatisés à ta place.",
     monthlyPrice: 42,
     launchPrice: 34.99,
-    yearlyPrice: 420,
+    yearlyPrice: 300,
     businessPlans: 5,
     questionnaires: null,
     automations: true,
@@ -69,9 +69,14 @@ export const TOTAL_BUSINESSES = 5;
 
 export type Billing = "monthly" | "yearly";
 
-/** Months saved by paying yearly, shown as "2 mois offerts". */
-export function monthsOffered(offer: PlanOffer): number {
-  return Math.round((offer.monthlyPrice * 12 - offer.yearlyPrice) / offer.monthlyPrice);
+/** Saving of the yearly price against 12 regular months, in % (rounded). */
+export function yearlySaving(offer: PlanOffer): number {
+  return Math.round((1 - offer.yearlyPrice / (offer.monthlyPrice * 12)) * 100);
+}
+
+/** The best yearly saving across offers, for the billing switch label. */
+export function bestYearlySaving(): number {
+  return Math.max(...OFFERS.map(yearlySaving));
 }
 
 /**

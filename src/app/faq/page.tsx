@@ -23,7 +23,7 @@ const FAQ = [
   },
   {
     q: "Quelle différence entre Starter et Pro ?",
-    a: "Starter (23 € par mois) : le plan complet de ton business et son guide. Pro (42 € par mois) : l'automatisation incluse, le plan complet de ton business et son guide, et tous les guides et tous les plans de tous nos business. Juste après ton questionnaire, le premier mois est à 17,99 € ou 34,99 € pendant quelques minutes. Tu peux aussi payer à l'année : 230 € ou 420 €, soit 2 mois offerts.",
+    a: "Starter (23 € par mois) : le plan complet de ton business et son guide. Pro (42 € par mois) : l'automatisation incluse, le plan complet de ton business et son guide, et tous les guides et tous les plans de tous nos business. Juste après ton questionnaire, le premier mois est à 17,99 € ou 34,99 € pendant quelques minutes. Tu peux aussi payer à l'année : 180 € pour Starter (soit 15 € par mois) ou 300 € pour Pro (soit 25 € par mois).",
   },
   {
     q: "Est-ce que ScaleBiz garantit un revenu ?",

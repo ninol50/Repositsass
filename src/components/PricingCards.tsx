@@ -7,7 +7,8 @@ import {
   OFFERS,
   featureFor,
   formatPrice,
-  monthsOffered,
+  bestYearlySaving,
+  yearlySaving,
   type Billing,
   type PlanOffer,
 } from "@/lib/plans";
@@ -57,7 +58,7 @@ export function FeatureList({
 export function BillingToggle({ value, onChange }: { value: Billing; onChange: (b: Billing) => void }) {
   const options: { id: Billing; label: string }[] = [
     { id: "monthly", label: "Mensuel" },
-    { id: "yearly", label: "Annuel · 2 mois offerts" },
+    { id: "yearly", label: `Annuel · jusqu'à -${bestYearlySaving()} %` },
   ];
   return (
     <div role="radiogroup" aria-label="Facturation" className="mx-auto flex w-fit rounded-full border border-white/10 bg-ink-950/70 p-1">
@@ -91,7 +92,7 @@ function Price({ offer, billing, promo, launchNote }: { offer: PlanOffer; billin
           <span className="text-[14px] text-ink-400">/ an</span>
         </p>
         <p className="mt-1 text-[12.5px] font-medium text-brand-300">
-          soit {formatPrice(Math.round((offer.yearlyPrice / 12) * 100) / 100)} / mois · {monthsOffered(offer)} mois offerts
+          soit {formatPrice(Math.round((offer.yearlyPrice / 12) * 100) / 100)} / mois · -{yearlySaving(offer)} % sur l&apos;année
         </p>
       </div>
     );
