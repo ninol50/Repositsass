@@ -12,7 +12,7 @@ const LINKS = [
 
 export async function SiteHeader() {
   const user = await currentUser().catch(() => null);
-  const admin = user ? isAdminEmail(user.email) : false;
+  const admin = user ? await isAdminEmail(user.email) : false;
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/[0.07] bg-ink-950/70 backdrop-blur-xl">

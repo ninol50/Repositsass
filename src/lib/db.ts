@@ -36,6 +36,8 @@ export interface Store {
   createGeneration(userId: string, answers: Answers): Promise<Generation>;
   getGeneration(id: string): Promise<Generation | null>;
   listGenerations(userId: string, limit?: number): Promise<Generation[]>;
+  /** A value of the private settings table, or null. See settings.ts. */
+  getSetting(key: string): Promise<string | null>;
   /** Real round-trip to the store, so a health check proves more than config parsing. */
   ping(): Promise<PingResult>;
   /** Back-office: the signed-up accounts, newest first. */
@@ -80,6 +82,7 @@ export type PingResult = { ok: true; latencyMs: number } | { ok: false; error: s
 type MemoryCode = { codeHash: string; expiresAt: number; attempts: number };
 
 type MemoryState = {
+  settings: Map<string, string>;
   users: Map<string, User>;
   generations: Map<string, Generation>;
   codes: Map<string, MemoryCode>;
@@ -89,7 +92,7 @@ const globalMemory = globalThis as unknown as { __scalebiz_memory?: MemoryState 
 
 function memoryState(): MemoryState {
   if (!globalMemory.__scalebiz_memory) {
-    globalMemory.__scalebiz_memory = { users: new Map(), generations: new Map(), codes: new Map() };
+    globalMemory.__scalebiz_memory = { settings: new Map(), users: new Map(), generations: new Map(), codes: new Map() };
   }
   return globalMemory.__scalebiz_memory;
 }
@@ -169,6 +172,10 @@ class MemoryStore implements Store {
 
   async ping(): Promise<PingResult> {
     return { ok: true, latencyMs: 0 };
+  }
+
+  async getSetting(key: string) {
+    return memoryState().settings.get(key) ?? null;
   }
 
   async listUsers(limit = 200): Promise<AdminUser[]> {
@@ -283,6 +290,21 @@ class PostgresStore implements Store {
     await sql`ALTER TABLE sb_users ENABLE ROW LEVEL SECURITY`;
     await sql`ALTER TABLE sb_generations ENABLE ROW LEVEL SECURITY`;
     await sql`ALTER TABLE sb_login_codes ENABLE ROW LEVEL SECURITY`;
+
+    // Private configuration (see settings.ts). Same RLS lock: secrets kept
+    // here must never be reachable through Supabase's public API.
+    await sql`CREATE TABLE IF NOT EXISTS sb_settings (
+      key text PRIMARY KEY,
+      value text NOT NULL,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )`;
+    await sql`ALTER TABLE sb_settings ENABLE ROW LEVEL SECURITY`;
+  }
+
+  async getSetting(key: string) {
+    await this.init();
+    const rows = await this.sql`SELECT value FROM sb_settings WHERE key = ${key} LIMIT 1`;
+    return rows[0] ? String(rows[0].value) : null;
   }
 
   async createUser(email: string) {

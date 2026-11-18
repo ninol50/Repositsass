@@ -7,14 +7,16 @@
  * is worse than an explicit error.
  */
 
-export function emailConfigured(): boolean {
-  return Boolean(process.env.RESEND_API_KEY);
+import { getSetting } from "./settings";
+
+export async function emailConfigured(): Promise<boolean> {
+  return Boolean(await getSetting("RESEND_API_KEY"));
 }
 
-function sender(): string {
+async function sender(): Promise<string> {
   // onboarding@resend.dev works without a verified domain, but Resend then
   // only delivers to the address that owns the Resend account.
-  return process.env.EMAIL_FROM || "ScaleBiz <onboarding@resend.dev>";
+  return (await getSetting("EMAIL_FROM")) || "ScaleBiz <onboarding@resend.dev>";
 }
 
 export type SendResult = { ok: true; devLogged?: boolean } | { ok: false; error: string };
@@ -38,7 +40,7 @@ export async function sendLoginCode(to: string, code: string, ttlMinutes: number
   </table>
 </body></html>`;
 
-  const key = process.env.RESEND_API_KEY;
+  const key = await getSetting("RESEND_API_KEY");
   if (!key) {
     if (process.env.NODE_ENV !== "production") {
       console.log(`[email] (dev, pas de RESEND_API_KEY) code pour ${to} : ${code}`);
@@ -56,7 +58,7 @@ export async function sendLoginCode(to: string, code: string, ttlMinutes: number
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: sender(), to: [to], subject, text, html }),
+      body: JSON.stringify({ from: await sender(), to: [to], subject, text, html }),
       signal: AbortSignal.timeout(10_000),
     });
     if (res.ok) return { ok: true };

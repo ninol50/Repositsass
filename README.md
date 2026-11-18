@@ -106,6 +106,11 @@ ouvrir `/admin`.
 | `ADMIN_EMAILS` | pour `/admin` | Emails autorisés, séparés par des virgules. |
 | `NEXT_PUBLIC_SITE_URL` | recommandé | Métadonnées, sitemap, robots.txt. |
 
+**Sans passer par Vercel :** `RESEND_API_KEY`, `EMAIL_FROM` et `ADMIN_EMAILS` peuvent
+aussi être rangées dans la table privée `sb_settings` de la base (colonnes `key`,
+`value`, protégée par RLS). Une variable d'environnement, si elle existe, l'emporte.
+Prise en compte en moins d'une minute, sans redéploiement.
+
 En production, sans `AUTH_SECRET` ou sans base, l'inscription est refusée avec un
 message explicite plutôt que de créer des comptes qui disparaîtraient.
 `GET /api/health` dit ce qui manque.

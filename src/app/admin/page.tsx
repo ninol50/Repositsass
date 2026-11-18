@@ -30,7 +30,7 @@ export default async function AdminPage() {
   if (!user) redirect("/login?next=/admin");
 
   // 404 rather than 403: a non-admin should not learn that this page exists.
-  if (!isAdminEmail(user.email)) notFound();
+  if (!(await isAdminEmail(user.email))) notFound();
 
   const store = getStore();
   const [users, stats] = await Promise.all([store.listUsers(500), store.adminStats()]);
@@ -109,7 +109,7 @@ export default async function AdminPage() {
           )}
         </section>
 
-        {!adminConfigured() && (
+        {!(await adminConfigured()) && (
           <div className="mt-8">
             <Alert tone="warning">
               <code>ADMIN_EMAILS</code> n&apos;est pas configuré : personne ne peut accéder à cette page.

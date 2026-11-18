@@ -14,7 +14,7 @@ export const runtime = "nodejs";
  */
 export async function POST(req: Request) {
   const admin = await currentUser();
-  if (!admin || !isAdminEmail(admin.email)) {
+  if (!admin || !(await isAdminEmail(admin.email))) {
     return Response.json({ error: "Introuvable." }, { status: 404 });
   }
 
