@@ -275,6 +275,14 @@ class PostgresStore implements Store {
       attempts int NOT NULL DEFAULT 0,
       created_at timestamptz NOT NULL DEFAULT now()
     )`;
+
+    // Supabase publishes every table of the public schema through its REST
+    // API (anon key). Row Level Security with no policy closes that door; the
+    // app itself connects as the table owner, which RLS does not restrict.
+    // Harmless on a plain Postgres.
+    await sql`ALTER TABLE sb_users ENABLE ROW LEVEL SECURITY`;
+    await sql`ALTER TABLE sb_generations ENABLE ROW LEVEL SECURITY`;
+    await sql`ALTER TABLE sb_login_codes ENABLE ROW LEVEL SECURITY`;
   }
 
   async createUser(email: string) {
