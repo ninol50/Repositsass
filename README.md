@@ -39,10 +39,15 @@ Un visiteur déjà connecté passe la pause sans s'arrêter.
 
 **Sans offre, rien n'est visible** : la page résultat ne montre qu'un cadenas et l'offre.
 
-**Après la génération, une seule offre est proposée**, celle qui correspond au plan
-(`recommendedOffer`) : automatisation voulue + objectif très élevé → Elite ;
-automatisation voulue → Pro ; objectif très élevé sans automatisation → Pro ; sinon
-Starter. Le bouton « Découvrir les autres offres » montre les deux autres.
+**Après la génération, une seule offre est proposée** (`recommendedOffer`). **Pro est
+l'offre par défaut**, mise en avant comme « la plus avantageuse » (`BEST_VALUE`). Elle
+ne change que quand les réponses le justifient : Elite si la personne veut tout
+automatiser **et** vise un objectif très élevé ; Starter si elle fait tout elle-même
+**et** vise un petit objectif (≤ 1 500 €/mois, atteignable avec son temps). La raison
+affichée sous l'offre suit le profil. Déterministe : mêmes réponses, même offre.
+Sur un balayage de 540 profils : Pro 68 %, Starter 17 %, Elite 15 %.
+
+Le bouton « Découvrir les autres offres » montre les deux autres.
 
 **Offre de lancement** (`PROMO`) : -30 % le premier mois pendant 5 minutes après la
 génération. Le compte à rebours est réel (calculé par le serveur, il ne repart pas au

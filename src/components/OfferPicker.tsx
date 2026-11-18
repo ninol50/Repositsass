@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { OFFERS } from "@/lib/plans";
+import { BEST_VALUE, OFFERS } from "@/lib/plans";
 import type { PlanOffer } from "@/lib/plans";
 import { OfferCard } from "./PricingCards";
 
@@ -28,7 +28,12 @@ export function OfferPicker({
     <div>
       <div className="mx-auto max-w-md">
         <p className="mb-5 text-center text-[14px] leading-relaxed text-ink-300">{reason}</p>
-        <OfferCard offer={recommended} promo={promo} featured badge="Recommandé pour ton plan" />
+        <OfferCard
+          offer={recommended}
+          promo={promo}
+          featured
+          badge={recommended.id === BEST_VALUE ? "Recommandé pour ton plan · le plus avantageux" : "Recommandé pour ton plan"}
+        />
       </div>
 
       {!open ? (
@@ -44,7 +49,12 @@ export function OfferPicker({
       ) : (
         <div className="animate-rise mx-auto mt-8 grid max-w-3xl gap-4 md:grid-cols-2">
           {others.map((o) => (
-            <OfferCard key={o.id} offer={o} promo={promo} />
+            <OfferCard
+              key={o.id}
+              offer={o}
+              promo={promo}
+              badge={o.id === BEST_VALUE ? "Le plus avantageux" : undefined}
+            />
           ))}
         </div>
       )}

@@ -130,23 +130,50 @@ export function planLabel(plan: Plan): string {
   return offerFor(plan)?.name ?? "Aucune offre";
 }
 
+/** The offer we put forward: best value, shown by default. */
+export const BEST_VALUE: PlanOffer["id"] = "pro";
+
+/** Below this target, with no automation wanted, Starter is enough. */
+const STARTER_MAX_TARGET = 1500;
+
 /**
- * The single offer shown after a generation: the one that fits the answers.
- * Two signals: do they want everything automated, and how far is the target
- * from what their hours alone can produce.
+ * The single offer shown after a generation.
+ *
+ * Pro is the default — the best value for most profiles. The recommendation
+ * moves away from it only when the answers clearly call for it:
+ *  - Elite: wants everything automated AND a very ambitious target;
+ *  - Starter: does it alone AND a small, easily reachable target.
+ * Deterministic on purpose: the same answers always get the same offer, so
+ * two people comparing never see a random difference.
  */
 export function recommendedOffer(a: Answers): { offer: PlanOffer; reason: string } {
-  const veryAmbitious = computeProfile(a).ambition === "tres-ambitieux";
+  const profile = computeProfile(a);
   const pick = (id: PlanOffer["id"]) => OFFERS.find((o) => o.id === id)!;
 
-  if (a.automate && veryAmbitious) {
-    return { offer: pick("elite"), reason: "Tu veux tout automatiser et ton objectif est élevé : il te faut tout, fait à ta place." };
+  if (a.automate && profile.ambition === "tres-ambitieux") {
+    return {
+      offer: pick("elite"),
+      reason: "Tu veux tout automatiser et ton objectif est élevé : il te faut tout, fait à ta place.",
+    };
   }
+
+  if (!a.automate && profile.ambition === "accessible" && a.monthlyTarget <= STARTER_MAX_TARGET) {
+    return {
+      offer: pick("starter"),
+      reason: "Ton objectif est atteignable seul : ton plan, ta fiche et tes guides pour avancer pas à pas.",
+    };
+  }
+
+  // Pro: the reason follows what matters most in the answers.
+  let reason = "Le meilleur rapport pour toi : l'automatisation faite à ta place et 10 guides par mois.";
   if (a.automate) {
-    return { offer: pick("pro"), reason: "Tu veux qu'on automatise à ta place : c'est l'offre qui le fait pour toi." };
+    reason = "Tu veux qu'on automatise à ta place : Pro le fait pour toi, avec 10 guides par mois.";
+  } else if (profile.ambition === "tres-ambitieux") {
+    reason = "Ton objectif est élevé : 3 business et l'automatisation faite à ta place pour y arriver plus vite.";
+  } else if ((a.experience ?? 0) === 0) {
+    reason = "Tu débutes : 10 guides par mois et l'automatisation faite à ta place pour ne pas te perdre.";
+  } else if (a.hoursPerDay <= 2) {
+    reason = `Avec ${a.hoursPerDay} h par jour, il faut que ça tourne sans toi : Pro automatise à ta place.`;
   }
-  if (veryAmbitious) {
-    return { offer: pick("pro"), reason: "Ton objectif est élevé : 3 business et 10 guides par mois pour y arriver plus vite." };
-  }
-  return { offer: pick("starter"), reason: "Ton plan, ta fiche et tes guides pour lancer ton business pas à pas." };
+  return { offer: pick("pro"), reason };
 }

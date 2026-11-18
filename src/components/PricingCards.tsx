@@ -1,4 +1,4 @@
-import { OFFERS, PROMO, formatPrice, promoPrice, type PlanOffer } from "@/lib/plans";
+import { BEST_VALUE, OFFERS, PROMO, formatPrice, promoPrice, type PlanOffer } from "@/lib/plans";
 import type { Plan } from "@/lib/types";
 import { PlanButton } from "./PlanButton";
 import { CheckIcon, cx } from "./ui";
@@ -80,8 +80,8 @@ export function PricingCards({ currentPlan, promo = false }: { currentPlan?: Pla
           offer={offer}
           promo={promo}
           current={currentPlan === offer.id}
-          featured={offer.id === "pro"}
-          badge={offer.id === "pro" ? "Le plus choisi" : undefined}
+          featured={offer.id === BEST_VALUE}
+          badge={offer.id === BEST_VALUE ? "Le plus avantageux" : undefined}
         />
       ))}
     </div>
