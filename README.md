@@ -29,31 +29,32 @@ Un visiteur déjà connecté passe la pause sans s'arrêter.
 
 ## Les offres (`src/lib/plans.ts`)
 
-| | Starter | Pro | Elite |
-| --- | --- | --- | --- |
-| Prix | 19 € / mois | 39 € / mois | 79 € / mois |
-| Plans de business | 1 | 3 | tous (5) |
-| Guides | 3 / mois | 10 / mois | 20 complets par business |
-| Automatisation | 1, avec son guide | faite à ta place | tout, à ta place |
-| Outils | pour la mise en place | idem | tous les meilleurs |
+| | Starter | Pro |
+| --- | --- | --- |
+| Prix | 26 € / mois | 45 € / mois |
+| Prix de lancement (1er mois, 5 min après le questionnaire) | 22 € | 39,99 € |
+| Business | 1 : toujours le Clipping | tous |
+| Questionnaires | 1 (vérifié côté serveur) | illimités |
+| Automatisations | non | faites à ta place |
+| Guides | le plan et son guide | plus complets, plus de pages |
 
 **Sans offre, rien n'est visible** : la page résultat ne montre qu'un cadenas et l'offre.
 
 **Après la génération, une seule offre est proposée** (`recommendedOffer`). **Pro est
-l'offre par défaut**, mise en avant comme « la plus avantageuse » (`BEST_VALUE`). Elle
-ne change que quand les réponses le justifient : Elite si la personne veut tout
-automatiser **et** vise un objectif très élevé ; Starter si elle fait tout elle-même
-**et** vise un petit objectif (≤ 1 500 €/mois, atteignable avec son temps). La raison
-affichée sous l'offre suit le profil. Déterministe : mêmes réponses, même offre.
-Sur un balayage de 540 profils : Pro 68 %, Starter 17 %, Elite 15 %.
+l'offre par défaut**, mise en avant comme « la plus avantageuse » (`BEST_VALUE`).
+Starter n'est proposé que si la personne fait tout elle-même **et** vise un petit
+objectif (≤ 1 500 €/mois, atteignable avec son temps). La raison affichée suit le
+profil. Déterministe : mêmes réponses, même offre. Le bouton « Découvrir les autres
+offres » montre l'autre.
 
-Le bouton « Découvrir les autres offres » montre les deux autres.
+**Prix de lancement** (`PROMO`) : pendant 5 minutes après la génération, le premier
+mois est à `launchPrice`. Le compte à rebours est réel (calculé par le serveur, il ne
+repart pas au rafraîchissement) ; ensuite, le premier mois est au prix normal. La page
+Offres affiche les prix normaux et précise que le prix de lancement s'obtient après le
+questionnaire — sinon le compte à rebours mentirait. Quand le paiement sera branché, il
+doit facturer `launchPrice` uniquement tant que `promoActive()` est vrai.
 
-**Offre de lancement** (`PROMO`) : -30 % le premier mois pendant 5 minutes après la
-génération. Le compte à rebours est réel (calculé par le serveur, il ne repart pas au
-rafraîchissement) : un faux minuteur est une pratique commerciale trompeuse. Quand
-le paiement sera branché, il doit appliquer la remise uniquement tant que
-`promoActive()` est vrai.
+Les comptes réglés sur l'ancienne offre « elite » sont lus comme Pro.
 
 **Le paiement n'est pas branché.** En attendant, une offre s'accorde à la main depuis
 **`/admin`** (colonne « Offre »).

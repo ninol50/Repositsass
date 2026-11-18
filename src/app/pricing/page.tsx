@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Offres",
-  description: "Starter, Pro ou Elite : débloque les business ScaleBiz adaptés à ton profil.",
+  description: "Starter ou Pro : débloque ton plan ScaleBiz, tes guides et tes automatisations.",
 };
 
 export default async function PricingPage() {
@@ -26,7 +26,7 @@ export default async function PricingPage() {
           description="Le questionnaire est gratuit. Chaque offre débloque ton plan, tes guides et tes automatisations."
         />
         <div className="mt-12">
-          <PricingCards currentPlan={user ? effectivePlan(user) : undefined} />
+          <PricingCards currentPlan={user ? effectivePlan(user) : undefined} launchNote />
         </div>
         {!user && (
           <div className="mt-12 text-center">

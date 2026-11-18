@@ -12,8 +12,8 @@ import { rankForPlan } from "@/lib/businesses";
 import { getStore } from "@/lib/db";
 import {
   OFFERS,
-  PROMO,
   businessPlansFor,
+  offerFor,
   planLabel,
   promoActive,
   promoEndsAt,
@@ -73,7 +73,7 @@ export default async function ResultPage({
                   ⚠️ On a trouvé ton plan ‼️ Débloque-le avant de le perdre
                 </span>
                 <span className="text-[13.5px] text-ink-200">
-                  -{PROMO.percentOff} % sur {PROMO.scope}, offre valable encore
+                  Prix de lancement sur le premier mois, valable encore
                 </span>
               </span>
               <PromoCountdown endsAt={endsAt.toISOString()} className="font-mono text-[34px] font-bold tabular-nums text-white" />
@@ -178,7 +178,7 @@ export default async function ResultPage({
           </div>
         </section>
 
-        {plan !== "elite" && (
+        {offerFor(plan)?.id !== "pro" && (
           <section id="offres" className="mt-16 scroll-mt-20">
             <h2 className="text-center font-display text-[24px] font-semibold tracking-tight text-white sm:text-[28px]">
               Aller plus loin

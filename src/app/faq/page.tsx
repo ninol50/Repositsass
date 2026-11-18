@@ -22,8 +22,8 @@ const FAQ = [
     a: "Le questionnaire et la création de compte. Ton plan, lui, se débloque avec une offre : sans offre, il reste verrouillé.",
   },
   {
-    q: "Quelle différence entre Starter, Pro et Elite ?",
-    a: "Starter : le plan complet de ton business et sa fiche, 1 automatisation avec son guide, 3 guides par mois et les outils pour la mise en place. Pro : tout Starter, l'automatisation faite à ta place, 10 guides par mois et 2 business en plus. Elite : tous les business, tout automatisé à ta place, les meilleurs outils et 20 guides complets par business.",
+    q: "Quelle différence entre Starter et Pro ?",
+    a: "Starter (26 € par mois) : le Clipping, le business le plus simple pour démarrer, avec son plan complet et son guide, pour 1 questionnaire. Pro (45 € par mois) : tous les business, des questionnaires illimités, les automatisations faites à ta place et des guides plus complets. Juste après ton questionnaire, le premier mois est à 22 € ou 39,99 € pendant quelques minutes.",
   },
   {
     q: "Est-ce que ScaleBiz garantit un revenu ?",

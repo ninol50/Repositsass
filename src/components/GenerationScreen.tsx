@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { PROMO, formatPrice, promoPrice, recommendedOffer } from "@/lib/plans";
+import { formatPrice, recommendedOffer } from "@/lib/plans";
 import { computeProfile, euros } from "@/lib/profile";
 import type { Answers } from "@/lib/questions";
 import { LogoMark } from "./Logo";
@@ -265,13 +265,13 @@ export function GenerationScreen({
                   </div>
                   <div className="text-right">
                     <p className="whitespace-nowrap font-display text-[26px] font-bold leading-none text-white">
-                      {formatPrice(promoPrice(recommended.offer.monthlyPrice))}
+                      {formatPrice(recommended.offer.launchPrice)}
                     </p>
-                    <p className="mt-1 text-[12.5px] text-ink-500 line-through">{recommended.offer.monthlyPrice} € / mois</p>
+                    <p className="mt-1 text-[12.5px] text-ink-500 line-through">{formatPrice(recommended.offer.monthlyPrice)} / mois</p>
                   </div>
                 </div>
                 <p className="mt-1 text-[12.5px] font-medium text-gold-300">
-                  -{PROMO.percentOff} % sur {PROMO.scope}
+                  le premier mois, puis {formatPrice(recommended.offer.monthlyPrice)} / mois
                 </p>
                 <Link
                   href={`/result/${result.id}#offres`}

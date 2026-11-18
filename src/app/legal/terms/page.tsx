@@ -43,7 +43,7 @@ export default function TermsPage() {
       <LegalSection title="4. Accès payant">
         <p>
           Le questionnaire est gratuit. L&apos;accès au plan, aux guides et aux automatisations
-          nécessite une offre active (Starter, Pro ou Elite), facturée chaque mois. L&apos;accès est
+          nécessite une offre active (Starter ou Pro), facturée chaque mois. L&apos;accès est
           accordé après confirmation du paiement par le prestataire. Les abonnements se renouvellent
           automatiquement jusqu&apos;à résiliation.
         </p>

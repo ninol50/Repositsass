@@ -3,8 +3,11 @@ import { Onboarding } from "@/components/Onboarding";
 import { PricingCards } from "@/components/PricingCards";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
-import { SectionHeading } from "@/components/ui";
+import { ButtonLink, SectionHeading } from "@/components/ui";
 import { currentUser } from "@/lib/auth";
+import { getStore } from "@/lib/db";
+import { questionnaireLimitFor } from "@/lib/plans";
+import { effectivePlan } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +33,20 @@ export default async function HomePage() {
   // Never let a database hiccup take the landing page down: the questionnaire
   // works without knowing who the visitor is.
   const user = await currentUser().catch(() => null);
+
+  // A Starter account has used its one questionnaire: say so up front rather
+  // than letting them answer everything for nothing.
+  let limitReached = false;
+  if (user) {
+    const limit = questionnaireLimitFor(effectivePlan(user));
+    if (limit !== null) {
+      const done = await getStore()
+        .listGenerations(user.id, limit + 1)
+        .then((g) => g.length)
+        .catch(() => 0);
+      limitReached = done >= limit;
+    }
+  }
 
   return (
     <>
@@ -58,7 +75,25 @@ export default async function HomePage() {
               className="animate-rise mx-auto mt-10 max-w-xl scroll-mt-24 text-left"
               style={{ animationDelay: "80ms" }}
             >
-              <Onboarding signedIn={Boolean(user)} />
+              {limitReached ? (
+                <div className="surface p-6 text-center sm:p-8">
+                  <p className="font-display text-[22px] font-semibold text-white">Ton questionnaire est déjà fait</p>
+                  <p className="mt-2 text-[14.5px] leading-relaxed text-ink-300">
+                    Ton offre Starter comprend 1 questionnaire. Passe à Pro pour en faire autant que tu veux et
+                    débloquer tous les business.
+                  </p>
+                  <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+                    <ButtonLink href="/dashboard" variant="brand">
+                      Voir mon plan
+                    </ButtonLink>
+                    <ButtonLink href="/pricing" variant="outline">
+                      Passer à Pro
+                    </ButtonLink>
+                  </div>
+                </div>
+              ) : (
+                <Onboarding signedIn={Boolean(user)} />
+              )}
             </div>
           </div>
         </section>
@@ -90,7 +125,7 @@ export default async function HomePage() {
               description="Le questionnaire est gratuit. Ton plan, tes guides et tes automatisations se débloquent avec ton offre."
             />
             <div className="mt-12">
-              <PricingCards />
+              <PricingCards launchNote />
             </div>
           </div>
         </section>

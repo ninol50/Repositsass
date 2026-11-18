@@ -1,4 +1,4 @@
-import { BEST_VALUE, OFFERS, PROMO, formatPrice, promoPrice, type PlanOffer } from "@/lib/plans";
+import { BEST_VALUE, OFFERS, formatPrice, type PlanOffer } from "@/lib/plans";
 import type { Plan } from "@/lib/types";
 import { PlanButton } from "./PlanButton";
 import { CheckIcon, cx } from "./ui";
@@ -9,6 +9,7 @@ export function OfferCard({
   current = false,
   featured = false,
   badge,
+  launchNote = false,
 }: {
   offer: PlanOffer;
   /** True only while a just-generated plan's launch offer is still running. */
@@ -16,6 +17,8 @@ export function OfferCard({
   current?: boolean;
   featured?: boolean;
   badge?: string;
+  /** Public pages: say how to get the launch price. */
+  launchNote?: boolean;
 }) {
   return (
     <div
@@ -39,18 +42,23 @@ export function OfferCard({
         <div className="mt-5">
           <p className="flex items-baseline gap-2">
             <span className="whitespace-nowrap font-display text-[40px] font-bold tracking-tight text-white">
-              {formatPrice(promoPrice(offer.monthlyPrice))}
+              {formatPrice(offer.launchPrice)}
             </span>
-            <span className="text-[16px] text-ink-500 line-through">{offer.monthlyPrice} €</span>
+            <span className="text-[16px] text-ink-500 line-through">{formatPrice(offer.monthlyPrice)}</span>
           </p>
           <p className="mt-1 text-[12.5px] font-medium text-gold-300">
-            -{PROMO.percentOff} % sur {PROMO.scope}, puis {offer.monthlyPrice} € / mois
+            le premier mois, puis {formatPrice(offer.monthlyPrice)} / mois
           </p>
         </div>
       ) : (
         <p className="mt-5 flex items-baseline gap-1">
           <span className="whitespace-nowrap font-display text-[40px] font-bold tracking-tight text-white">{offer.monthlyPrice} €</span>
           <span className="text-[14px] text-ink-400">/ mois</span>
+        </p>
+      )}
+      {!promo && launchNote && (
+        <p className="mt-1 text-[12.5px] text-gold-300">
+          {formatPrice(offer.launchPrice)} le premier mois, juste après ton questionnaire
         </p>
       )}
 
@@ -71,15 +79,24 @@ export function OfferCard({
 }
 
 /** All the offers side by side (pricing page, home page). */
-export function PricingCards({ currentPlan, promo = false }: { currentPlan?: Plan; promo?: boolean }) {
+export function PricingCards({
+  currentPlan,
+  promo = false,
+  launchNote = false,
+}: {
+  currentPlan?: Plan;
+  promo?: boolean;
+  launchNote?: boolean;
+}) {
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="mx-auto grid max-w-3xl gap-4 md:grid-cols-2">
       {OFFERS.map((offer) => (
         <OfferCard
           key={offer.id}
           offer={offer}
           promo={promo}
-          current={currentPlan === offer.id}
+          current={currentPlan === offer.id || (currentPlan === "elite" && offer.id === "pro")}
+          launchNote={launchNote}
           featured={offer.id === BEST_VALUE}
           badge={offer.id === BEST_VALUE ? "Le plus avantageux" : undefined}
         />

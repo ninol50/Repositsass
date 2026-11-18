@@ -47,7 +47,7 @@ export function OfferPicker({
           </button>
         </div>
       ) : (
-        <div className="animate-rise mx-auto mt-8 grid max-w-3xl gap-4 md:grid-cols-2">
+        <div className="animate-rise mx-auto mt-8 grid max-w-md gap-4">
           {others.map((o) => (
             <OfferCard
               key={o.id}

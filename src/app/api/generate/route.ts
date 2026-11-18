@@ -1,6 +1,7 @@
 import { currentUser } from "@/lib/auth";
 import { getStore } from "@/lib/db";
-import { promoEndsAt } from "@/lib/plans";
+import { planLabel, promoEndsAt, questionnaireLimitFor } from "@/lib/plans";
+import { effectivePlan } from "@/lib/types";
 import { validateAnswers } from "@/lib/questions";
 import { clientKey, rateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { serverFailure } from "@/lib/setup";
@@ -36,7 +37,25 @@ export async function POST(req: Request) {
   }
 
   try {
-    const generation = await getStore().createGeneration(user.id, validation.answers);
+    const store = getStore();
+
+    // Starter includes one questionnaire; Pro is unlimited. Enforced here, not
+    // in the browser.
+    const limit = questionnaireLimitFor(effectivePlan(user));
+    if (limit !== null) {
+      const done = (await store.listGenerations(user.id, limit + 1)).length;
+      if (done >= limit) {
+        return Response.json(
+          {
+            error: `Ton offre ${planLabel(effectivePlan(user))} comprend ${limit} questionnaire. Passe à Pro pour en faire autant que tu veux.`,
+            upgrade: true,
+          },
+          { status: 402 },
+        );
+      }
+    }
+
+    const generation = await store.createGeneration(user.id, validation.answers);
     return Response.json(
       { id: generation.id, promoEndsAt: promoEndsAt(generation.createdAt).toISOString() },
       { status: 201 },

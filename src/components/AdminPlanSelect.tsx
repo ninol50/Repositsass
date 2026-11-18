@@ -8,7 +8,6 @@ const OPTIONS: { value: Plan; label: string }[] = [
   { value: "free", label: "Gratuit" },
   { value: "starter", label: "Starter" },
   { value: "pro", label: "Pro" },
-  { value: "elite", label: "Elite" },
 ];
 
 /** Grants an offer by hand — the way to test the paywall until payment exists. */

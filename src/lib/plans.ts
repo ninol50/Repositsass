@@ -1,10 +1,9 @@
 /**
  * The offers, and what each one unlocks.
  *
- * Single source of truth: the result page paywall, the pricing page and the
- * admin all read from here. Changing a price or a perk is a one-line edit.
- *
- * Prices are placeholders until payment is wired.
+ * Single source of truth: the result page paywall, the pricing page, the
+ * generation screen and the admin all read from here. Changing a price or a
+ * perk is a one-line edit.
  */
 
 import { computeProfile } from "./profile";
@@ -12,21 +11,22 @@ import type { Answers } from "./questions";
 import type { Plan } from "./types";
 
 export type PlanOffer = {
-  id: Exclude<Plan, "free">;
+  id: "starter" | "pro";
   name: string;
-  /** Euros per month. */
-  monthlyPrice: number;
   tagline: string;
+  /** Regular price, euros per month. */
+  monthlyPrice: number;
   /**
-   * How many businesses this offer generates a full plan for (one
-   * questionnaire = one business). The best matches come first.
+   * Launch price of the FIRST month — only while the countdown that follows
+   * a questionnaire is running (see PROMO). Afterwards: monthlyPrice.
    */
+  launchPrice: number;
+  /** Businesses whose full plan is opened. */
   businessPlans: number;
-  /** Guides included each month. */
-  guidesPerMonth: number;
-  /** "guide": one automation, set up by the user with its guide. "done": done for them. */
-  automation: "guide" | "done";
-  /** Shown on the card. Keep it in sync with the numbers above. */
+  /** Questionnaires (generations) included. null = unlimited. */
+  questionnaires: number | null;
+  /** Done-for-you automations. */
+  automations: boolean;
   perks: string[];
 };
 
@@ -34,69 +34,84 @@ export const OFFERS: PlanOffer[] = [
   {
     id: "starter",
     name: "Starter",
-    monthlyPrice: 19,
-    tagline: "Pour lancer ton business, pas à pas.",
+    tagline: "Pour démarrer avec le business le plus simple.",
+    monthlyPrice: 26,
+    launchPrice: 22,
     businessPlans: 1,
-    guidesPerMonth: 3,
-    automation: "guide",
+    questionnaires: 1,
+    automations: false,
     perks: [
-      "Le plan complet de ton business + sa fiche détaillée",
-      "1 automatisation adaptée à ton business, avec son guide",
-      "3 guides par mois",
-      "Les outils parfaits pour la mise en place",
+      "Le Clipping : le business le plus simple pour démarrer",
+      "Son plan complet et son guide pas à pas",
+      "1 questionnaire",
     ],
   },
   {
     id: "pro",
     name: "Pro",
-    monthlyPrice: 39,
-    tagline: "On automatise à ta place.",
-    businessPlans: 3,
-    guidesPerMonth: 10,
-    automation: "done",
-    perks: [
-      "Tout le plan Starter",
-      "L'automatisation mise en place à ta place",
-      "10 guides par mois sur ton business",
-      "2 business en plus : 3 plans de business au total",
-    ],
-  },
-  {
-    id: "elite",
-    name: "Elite",
-    monthlyPrice: 79,
-    tagline: "Tout, sans rien faire.",
+    tagline: "Tous les business, automatisés à ta place.",
+    monthlyPrice: 45,
+    launchPrice: 39.99,
     businessPlans: 5,
-    guidesPerMonth: 20,
-    automation: "done",
+    questionnaires: null,
+    automations: true,
     perks: [
-      "L'intégralité des business proposés",
-      "Tout automatisé à ta place",
-      "Tous les meilleurs outils à utiliser",
-      "20 guides complets par business",
+      "Tous les business débloqués",
+      "Questionnaires illimités",
+      "Les automatisations, faites à ta place",
+      "Des guides plus complets, avec plus de pages",
     ],
   },
 ];
 
 export const TOTAL_BUSINESSES = 5;
 
+/** The offer we put forward: best value, shown by default. */
+export const BEST_VALUE: PlanOffer["id"] = "pro";
+
 /**
- * Launch offer shown right after a generation.
+ * Accounts set to "elite" before the offers were merged keep everything:
+ * they read as Pro.
+ */
+export function offerFor(plan: Plan): PlanOffer | null {
+  const id = plan === "elite" ? "pro" : plan;
+  return OFFERS.find((o) => o.id === id) ?? null;
+}
+
+/** Businesses whose full plan this account can open. 0 = nothing (not paying). */
+export function businessPlansFor(plan: Plan): number {
+  return offerFor(plan)?.businessPlans ?? 0;
+}
+
+/** Questionnaires this account may run. null = unlimited; free accounts are not limited here. */
+export function questionnaireLimitFor(plan: Plan): number | null {
+  return offerFor(plan)?.questionnaires ?? null;
+}
+
+export function planLabel(plan: Plan): string {
+  return offerFor(plan)?.name ?? "Aucune offre";
+}
+
+/* ---------------------------------------------------------------------- */
+/* Launch price after a questionnaire                                      */
+/* ---------------------------------------------------------------------- */
+
+/**
+ * After a questionnaire, the first month is at `launchPrice` for a few
+ * minutes.
  *
  * The countdown is REAL: it ends `minutes` after the plan was generated, as
  * computed by the server from the generation's creation date. Refreshing
- * does not restart it, and once it is over the discount is gone. A timer
- * that lies (restarts, or never really ends) is a misleading commercial
- * practice under French/EU consumer law — keep it honest.
+ * does not restart it, and once it is over the first month is at the regular
+ * price. That is also why the pricing page shows the regular prices: if the
+ * launch price were available everywhere, the countdown would be a lie — a
+ * misleading commercial practice under French/EU consumer law.
  *
- * When payment is wired, the checkout MUST apply `percentOff` only while
- * `promoActive(...)` is true.
+ * When payment is wired, the checkout MUST charge `launchPrice` for the first
+ * month only while `promoActive(...)` is true.
  */
 export const PROMO = {
-  percentOff: 30,
   minutes: 5,
-  /** What the discount applies to, shown next to the price. */
-  scope: "le premier mois",
 };
 
 export function promoEndsAt(generationCreatedAt: string | Date): Date {
@@ -107,31 +122,15 @@ export function promoActive(endsAt: Date, now = Date.now()): boolean {
   return endsAt.getTime() > now;
 }
 
-export function promoPrice(monthlyPrice: number): number {
-  return Math.round(monthlyPrice * (100 - PROMO.percentOff)) / 100;
-}
-
-/** "55,30 €" / "19 €": cents only when there are some. */
+/** "39,99 €" / "26 €": cents only when there are some. */
 export function formatPrice(euros: number): string {
   const cents = !Number.isInteger(euros);
   return `${euros.toLocaleString("fr-FR", { minimumFractionDigits: cents ? 2 : 0, maximumFractionDigits: 2 })} €`;
 }
 
-export function offerFor(plan: Plan): PlanOffer | null {
-  return OFFERS.find((o) => o.id === plan) ?? null;
-}
-
-/** Businesses whose full plan this account can open. 0 = nothing (not paying). */
-export function businessPlansFor(plan: Plan): number {
-  return offerFor(plan)?.businessPlans ?? 0;
-}
-
-export function planLabel(plan: Plan): string {
-  return offerFor(plan)?.name ?? "Aucune offre";
-}
-
-/** The offer we put forward: best value, shown by default. */
-export const BEST_VALUE: PlanOffer["id"] = "pro";
+/* ---------------------------------------------------------------------- */
+/* Recommendation                                                          */
+/* ---------------------------------------------------------------------- */
 
 /** Below this target, with no automation wanted, Starter is enough. */
 const STARTER_MAX_TARGET = 1500;
@@ -139,39 +138,30 @@ const STARTER_MAX_TARGET = 1500;
 /**
  * The single offer shown after a generation.
  *
- * Pro is the default — the best value for most profiles. The recommendation
- * moves away from it only when the answers clearly call for it:
- *  - Elite: wants everything automated AND a very ambitious target;
- *  - Starter: does it alone AND a small, easily reachable target.
- * Deterministic on purpose: the same answers always get the same offer, so
- * two people comparing never see a random difference.
+ * Pro is the default — the best value for most profiles. Starter is proposed
+ * only when the answers clearly call for it: no automation wanted AND a
+ * small, easily reachable target. Deterministic on purpose: the same answers
+ * always get the same offer.
  */
 export function recommendedOffer(a: Answers): { offer: PlanOffer; reason: string } {
   const profile = computeProfile(a);
   const pick = (id: PlanOffer["id"]) => OFFERS.find((o) => o.id === id)!;
 
-  if (a.automate && profile.ambition === "tres-ambitieux") {
-    return {
-      offer: pick("elite"),
-      reason: "Tu veux tout automatiser et ton objectif est élevé : il te faut tout, fait à ta place.",
-    };
-  }
-
   if (!a.automate && profile.ambition === "accessible" && a.monthlyTarget <= STARTER_MAX_TARGET) {
     return {
       offer: pick("starter"),
-      reason: "Ton objectif est atteignable seul : ton plan, ta fiche et tes guides pour avancer pas à pas.",
+      reason: "Ton objectif est atteignable seul : le Clipping, son plan et son guide pour démarrer simplement.",
     };
   }
 
   // Pro: the reason follows what matters most in the answers.
-  let reason = "Le meilleur rapport pour toi : l'automatisation faite à ta place et 10 guides par mois.";
+  let reason = "Le meilleur rapport pour toi : tous les business, automatisés à ta place.";
   if (a.automate) {
-    reason = "Tu veux qu'on automatise à ta place : Pro le fait pour toi, avec 10 guides par mois.";
+    reason = "Tu veux qu'on automatise à ta place : seul Pro le fait, sur tous les business.";
   } else if (profile.ambition === "tres-ambitieux") {
-    reason = "Ton objectif est élevé : 3 business et l'automatisation faite à ta place pour y arriver plus vite.";
+    reason = "Ton objectif est élevé : tous les business et les automatisations pour y arriver plus vite.";
   } else if ((a.experience ?? 0) === 0) {
-    reason = "Tu débutes : 10 guides par mois et l'automatisation faite à ta place pour ne pas te perdre.";
+    reason = "Tu débutes : des guides plus complets et l'automatisation à ta place pour ne pas te perdre.";
   } else if (a.hoursPerDay <= 2) {
     reason = `Avec ${a.hoursPerDay} h par jour, il faut que ça tourne sans toi : Pro automatise à ta place.`;
   }
