@@ -96,6 +96,22 @@ export function serverFailure(err: unknown, route: string): Response {
   const message = err instanceof Error ? err.message : String(err);
   console.error(`[${route}] erreur inattendue (code=${code ?? "aucun"}) : ${message}`);
 
+  // Supabase's pooler (Supavisor) answers XX000 "Tenant or user not found"
+  // when the connection string does not match the project: wrong user name
+  // (it must be postgres.<project-ref>), wrong region host, or a mix of the
+  // direct and pooler strings.
+  if (/tenant or user not found/i.test(message)) {
+    return Response.json(
+      {
+        error:
+          "Supabase ne reconnaît pas DATABASE_URL (« Tenant or user not found »). Dans Supabase, clique sur " +
+          "« Connect », copie telle quelle la chaîne « Transaction pooler » (utilisateur postgres.xxxx, port 6543), " +
+          "remplace seulement [YOUR-PASSWORD], colle-la dans Vercel, puis redéploie.",
+      },
+      { status: 503 },
+    );
+  }
+
   if (err instanceof TypeError && /invalid url/i.test(message)) {
     return Response.json({ error: DATABASE_URL_MALFORMED }, { status: 503 });
   }
