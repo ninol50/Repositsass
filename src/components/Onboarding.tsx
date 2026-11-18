@@ -11,7 +11,9 @@ import {
   type Question,
   type QuestionId,
 } from "@/lib/questions";
+import { projectedMonthly } from "@/lib/profile";
 import { AuthForm } from "./AuthForm";
+import { CountUp } from "./CountUp";
 import { Fingerprint } from "./Fingerprint";
 import { GenerationScreen, type ScreenPhase } from "./GenerationScreen";
 import { CheckIcon, cx } from "./ui";
@@ -27,7 +29,7 @@ import { CheckIcon, cx } from "./ui";
 
 const STORAGE_KEY = "scalebiz:onboarding:v2";
 
-type Phase = "questions" | "consent" | "oath" | ScreenPhase;
+type Phase = "questions" | "consent" | "projection" | "oath" | ScreenPhase;
 
 /** Where the generation pauses for the account wall. */
 const PAUSE_AT = 62;
@@ -239,7 +241,8 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
 
   function back() {
     setFieldError(null);
-    if (phase === "oath") return setPhase("consent");
+    if (phase === "oath") return setPhase("projection");
+    if (phase === "projection") return setPhase("consent");
     if (phase === "consent") return setPhase("questions");
     if (step === 0) return;
     const s = step - 1;
@@ -350,12 +353,47 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
             type="button"
             disabled={!consent}
             onClick={() => {
-              setPhase("oath");
-              save({ phase: "oath" });
+              setPhase("projection");
+              save({ phase: "projection" });
             }}
             className="h-12 rounded-xl bg-[linear-gradient(120deg,#34d399,#10b981)] px-6 text-[15px] font-semibold text-ink-950 transition-all hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
           >
             Continuer →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === "projection") {
+    return (
+      <div className="surface p-6 sm:p-8">
+        <p className="text-[13.5px] text-ink-400">On a calculé combien tu peux faire.</p>
+
+        <div className="flex min-h-[220px] flex-col items-center justify-center py-6 text-center">
+          <p className="text-[14px] text-ink-300">D&apos;après nos pros, ton plan peut te faire</p>
+          <CountUp
+            to={projectedMonthly(values as Answers)}
+            className="mt-2 block font-display text-[48px] font-bold leading-none tracking-tight text-gradient sm:text-[60px]"
+          />
+          <p className="mt-2 text-[15px] font-medium text-white">par mois</p>
+          <p className="mt-3 text-[13px] text-ink-400">
+            Ton objectif : {(values.monthlyTarget as number).toLocaleString("fr-FR")} € / mois
+          </p>
+          <p className="mt-5 text-[11.5px] text-ink-500">Estimation indicative, pas une garantie de revenu.</p>
+        </div>
+
+        <div className="mt-2 flex items-center justify-between gap-3">
+          {backButton}
+          <button
+            type="button"
+            onClick={() => {
+              setPhase("oath");
+              save({ phase: "oath" });
+            }}
+            className="h-12 rounded-xl bg-[linear-gradient(120deg,#34d399,#10b981)] px-6 text-[15px] font-semibold text-ink-950 transition-all hover:brightness-110 active:scale-[0.99]"
+          >
+            Suivant →
           </button>
         </div>
       </div>

@@ -62,3 +62,20 @@ export function computeProfile(a: Answers): Profile {
 export function euros(n: number): string {
   return `${n.toLocaleString("fr-FR")} €`;
 }
+
+/**
+ * "What our pros calculated you can make": shown between the consent and the
+ * fingerprint. It sits a little above the target (+12 % to +25 %) depending on
+ * experience, time and automation. It is an indicative estimate — the screen
+ * says so — never a guarantee.
+ */
+export function projectedMonthly(a: Answers): number {
+  let multiplier = 1.12;
+  multiplier += 0.02 * Math.min(a.experience ?? 0, 3); // up to +6 %
+  if (a.hoursPerDay >= 4) multiplier += 0.03;
+  if (a.automate) multiplier += 0.04;
+  let value = Math.round(a.monthlyTarget * multiplier);
+  // A round number looks made up; a computed one rarely ends in 0.
+  if (value % 10 === 0) value += 8;
+  return value;
+}
