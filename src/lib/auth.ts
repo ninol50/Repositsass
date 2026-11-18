@@ -1,18 +1,15 @@
 /**
- * Sessions and password handling.
+ * Sessions and sign-in codes.
  *
  * The JWT part uses `jose` so middleware (Edge runtime) can verify a session
- * without touching node:crypto. Password hashing stays in Node route handlers.
+ * without touching node:crypto. Sign-in codes are hashed in Node route handlers.
  */
 
-import { randomBytes, scrypt as scryptCb, timingSafeEqual } from "crypto";
-import { promisify } from "util";
+import { createHmac, randomInt } from "crypto";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { getStore } from "./db";
 import { toPublicUser, type PublicUser, type User } from "./types";
-
-const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number) => Promise<Buffer>;
 
 export const SESSION_COOKIE = "sb_session";
 const SESSION_DAYS = 30;
@@ -42,30 +39,24 @@ function secretKey(): Uint8Array | null {
   return new TextEncoder().encode("dev-only-insecure-secret-change-me-0123456789");
 }
 
-/* ---------------------------- passwords ---------------------------- */
+/* --------------------------- email codes ---------------------------- */
 
-export async function hashPassword(password: string): Promise<string> {
-  const salt = randomBytes(16);
-  const derived = await scrypt(password, salt, 64);
-  return `scrypt$${salt.toString("hex")}$${derived.toString("hex")}`;
+/** How long an emailed sign-in code stays valid. */
+export const CODE_TTL_MINUTES = 10;
+
+/** Six digits, uniformly drawn (randomInt has no modulo bias). */
+export function generateCode(): string {
+  return String(randomInt(0, 1_000_000)).padStart(6, "0");
 }
 
-export async function verifyPassword(password: string, stored: string): Promise<boolean> {
-  const [scheme, saltHex, hashHex] = stored.split("$");
-  if (scheme !== "scrypt" || !saltHex || !hashHex) return false;
-  const derived = await scrypt(password, Buffer.from(saltHex, "hex"), 64);
-  const expected = Buffer.from(hashHex, "hex");
-  if (expected.length !== derived.length) return false;
-  return timingSafeEqual(derived, expected);
-}
-
-export function passwordProblem(password: string): string | null {
-  if (password.length < 8) return "8 caracteres minimum.";
-  if (password.length > 200) return "Mot de passe trop long.";
-  if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
-    return "Ajoute au moins une lettre et un chiffre.";
-  }
-  return null;
+/**
+ * The code is never stored in clear: a database leak must not hand out
+ * working codes. Keyed with AUTH_SECRET and bound to the email, so a hash
+ * copied from one row is useless for another address.
+ */
+export function hashCode(email: string, code: string): string {
+  const key = secretKey() ?? new TextEncoder().encode("unconfigured");
+  return createHmac("sha256", Buffer.from(key)).update(`${email.toLowerCase()}:${code}`).digest("hex");
 }
 
 export function emailProblem(email: string): string | null {

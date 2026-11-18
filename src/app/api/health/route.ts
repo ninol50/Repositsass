@@ -1,3 +1,4 @@
+import { emailConfigured } from "@/lib/email";
 import { describeDatabase, getStore, storageDriver } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -59,6 +60,9 @@ export async function GET() {
       warnings.push(`Création des tables impossible${code ? ` (code ${code})` : ""} : ${message.slice(0, 200)}`);
     }
   }
+  if (!emailConfigured()) {
+    warnings.push("RESEND_API_KEY absente : aucun code de connexion ne peut être envoyé par email.");
+  }
   if (!process.env.ADMIN_EMAILS) {
     warnings.push("ADMIN_EMAILS absent : la page /admin est inaccessible.");
   }
@@ -74,6 +78,7 @@ export async function GET() {
       database: db
         ? { host: db.host, port: db.port, pooled: db.pooled, reachable: ping.ok, tablesReady, ...(ping.ok ? { latencyMs: ping.latencyMs } : {}) }
         : null,
+      email: emailConfigured(),
       warnings,
     },
     { status: warnings.length === 0 ? 200 : 503 },

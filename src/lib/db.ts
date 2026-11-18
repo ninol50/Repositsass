@@ -13,7 +13,7 @@
  * without colliding with its tables.
  */
 
-import { randomUUID } from "crypto";
+import { randomUUID, timingSafeEqual } from "crypto";
 import type { Answers } from "./questions";
 import { hasActivePlan, type Generation, type Plan, type User } from "./types";
 
@@ -22,7 +22,14 @@ export type Driver = "postgres" | "memory";
 export interface Store {
   driver: Driver;
   init(): Promise<void>;
-  createUser(email: string, passwordHash: string): Promise<User>;
+  createUser(email: string): Promise<User>;
+  /** Stores a fresh sign-in code for this email, replacing any previous one. */
+  saveLoginCode(email: string, codeHash: string, expiresAt: Date): Promise<void>;
+  /**
+   * Checks a code and burns it on success. Each wrong guess counts: after
+   * MAX_CODE_ATTEMPTS the code is dead and a new one must be requested.
+   */
+  consumeLoginCode(email: string, codeHash: string): Promise<CodeCheck>;
   getUserByEmail(email: string): Promise<User | null>;
   getUserById(id: string): Promise<User | null>;
   setPlan(userId: string, plan: Plan, source: string, expiresAt: string | null): Promise<void>;
@@ -36,7 +43,17 @@ export interface Store {
   adminStats(): Promise<AdminStats>;
 }
 
-/** A row of the admin table. Never carries the password hash. */
+export type CodeCheck = "ok" | "invalid" | "expired" | "too_many";
+
+export const MAX_CODE_ATTEMPTS = 5;
+
+function sameHash(a: string, b: string): boolean {
+  const x = Buffer.from(a);
+  const y = Buffer.from(b);
+  return x.length === y.length && timingSafeEqual(x, y);
+}
+
+/** A row of the admin table. */
 export type AdminUser = {
   id: string;
   email: string;
@@ -60,16 +77,19 @@ export type PingResult = { ok: true; latencyMs: number } | { ok: false; error: s
 /* Memory driver                                                       */
 /* ------------------------------------------------------------------ */
 
+type MemoryCode = { codeHash: string; expiresAt: number; attempts: number };
+
 type MemoryState = {
   users: Map<string, User>;
   generations: Map<string, Generation>;
+  codes: Map<string, MemoryCode>;
 };
 
 const globalMemory = globalThis as unknown as { __scalebiz_memory?: MemoryState };
 
 function memoryState(): MemoryState {
   if (!globalMemory.__scalebiz_memory) {
-    globalMemory.__scalebiz_memory = { users: new Map(), generations: new Map() };
+    globalMemory.__scalebiz_memory = { users: new Map(), generations: new Map(), codes: new Map() };
   }
   return globalMemory.__scalebiz_memory;
 }
@@ -81,11 +101,10 @@ class MemoryStore implements Store {
     memoryState();
   }
 
-  async createUser(email: string, passwordHash: string): Promise<User> {
+  async createUser(email: string): Promise<User> {
     const user: User = {
       id: randomUUID(),
       email: email.toLowerCase(),
-      passwordHash,
       plan: "free",
       planSource: null,
       planExpiresAt: null,
@@ -99,6 +118,24 @@ class MemoryStore implements Store {
     const target = email.toLowerCase();
     for (const u of memoryState().users.values()) if (u.email === target) return u;
     return null;
+  }
+
+  async saveLoginCode(email: string, codeHash: string, expiresAt: Date) {
+    memoryState().codes.set(email.toLowerCase(), { codeHash, expiresAt: expiresAt.getTime(), attempts: 0 });
+  }
+
+  async consumeLoginCode(email: string, codeHash: string): Promise<CodeCheck> {
+    const codes = memoryState().codes;
+    const key = email.toLowerCase();
+    const row = codes.get(key);
+    if (!row || row.expiresAt <= Date.now()) return "expired";
+    if (row.attempts >= MAX_CODE_ATTEMPTS) return "too_many";
+    if (!sameHash(row.codeHash, codeHash)) {
+      row.attempts += 1;
+      return row.attempts >= MAX_CODE_ATTEMPTS ? "too_many" : "invalid";
+    }
+    codes.delete(key);
+    return "ok";
   }
 
   async getUserById(id: string) {
@@ -173,7 +210,6 @@ function rowToUser(r: SqlRow): User {
   return {
     id: String(r.id),
     email: String(r.email),
-    passwordHash: String(r.password_hash),
     plan: String(r.plan) as Plan,
     planSource: r.plan_source ? String(r.plan_source) : null,
     planExpiresAt: r.plan_expires_at ? new Date(String(r.plan_expires_at)).toISOString() : null,
@@ -215,7 +251,7 @@ class PostgresStore implements Store {
     await sql`CREATE TABLE IF NOT EXISTS sb_users (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       email text UNIQUE NOT NULL,
-      password_hash text NOT NULL,
+      password_hash text,
       plan text NOT NULL DEFAULT 'free',
       plan_source text,
       plan_expires_at timestamptz,
@@ -228,14 +264,59 @@ class PostgresStore implements Store {
       created_at timestamptz NOT NULL DEFAULT now()
     )`;
     await sql`CREATE INDEX IF NOT EXISTS sb_generations_user_idx ON sb_generations(user_id, created_at DESC)`;
+
+    // Sign-in is by emailed code now. Tables created while passwords existed
+    // keep the column, but it must accept accounts that have none.
+    await sql`ALTER TABLE sb_users ALTER COLUMN password_hash DROP NOT NULL`;
+    await sql`CREATE TABLE IF NOT EXISTS sb_login_codes (
+      email text PRIMARY KEY,
+      code_hash text NOT NULL,
+      expires_at timestamptz NOT NULL,
+      attempts int NOT NULL DEFAULT 0,
+      created_at timestamptz NOT NULL DEFAULT now()
+    )`;
   }
 
-  async createUser(email: string, passwordHash: string) {
+  async createUser(email: string) {
     await this.init();
+    // ON CONFLICT: two verifications racing for a brand-new email must end
+    // with one account, not a unique-violation error.
     const rows = await this.sql`
-      INSERT INTO sb_users (email, password_hash) VALUES (${email.toLowerCase()}, ${passwordHash})
+      INSERT INTO sb_users (email) VALUES (${email.toLowerCase()})
+      ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
       RETURNING *`;
     return rowToUser(rows[0]);
+  }
+
+  async saveLoginCode(email: string, codeHash: string, expiresAt: Date) {
+    await this.init();
+    await this.sql`
+      INSERT INTO sb_login_codes (email, code_hash, expires_at, attempts, created_at)
+      VALUES (${email.toLowerCase()}, ${codeHash}, ${expiresAt.toISOString()}, 0, now())
+      ON CONFLICT (email) DO UPDATE
+        SET code_hash = EXCLUDED.code_hash, expires_at = EXCLUDED.expires_at, attempts = 0, created_at = now()`;
+  }
+
+  async consumeLoginCode(email: string, codeHash: string): Promise<CodeCheck> {
+    await this.init();
+    const key = email.toLowerCase();
+    const rows = await this.sql`
+      SELECT code_hash, expires_at, attempts FROM sb_login_codes WHERE email = ${key} LIMIT 1`;
+    const row = rows[0];
+    if (!row || new Date(String(row.expires_at)).getTime() <= Date.now()) return "expired";
+    if (Number(row.attempts) >= MAX_CODE_ATTEMPTS) return "too_many";
+
+    if (!sameHash(String(row.code_hash), codeHash)) {
+      const updated = await this.sql`
+        UPDATE sb_login_codes SET attempts = attempts + 1 WHERE email = ${key} RETURNING attempts`;
+      return Number(updated[0]?.attempts ?? MAX_CODE_ATTEMPTS) >= MAX_CODE_ATTEMPTS ? "too_many" : "invalid";
+    }
+
+    // Delete-and-check: if two requests race with the right code, only the
+    // one that actually deletes the row signs in.
+    const deleted = await this.sql`
+      DELETE FROM sb_login_codes WHERE email = ${key} AND code_hash = ${codeHash} RETURNING email`;
+    return deleted.length > 0 ? "ok" : "expired";
   }
 
   async getUserByEmail(email: string) {

@@ -13,10 +13,10 @@ Next.js 15 (App Router) · TypeScript · Tailwind CSS v4 · Postgres.
 1. **`/` : le questionnaire, directement sur l'accueil.** Âge, heures par jour,
    objectif par mois. Les réponses sont gardées en `sessionStorage` : un
    rafraîchissement ou un passage par la page de connexion ne fait rien perdre.
-2. **La génération démarre, puis se met en pause à 64 %.** Un cadenas apparaît
-   avec le formulaire de création de compte, dans la même carte. Le visiteur ne
-   quitte jamais la page. Lien « Se connecter » s'il a déjà un compte.
-3. **Le compte est créé → la génération reprend** (`POST /api/generate`, qui
+2. **La génération démarre, puis se met en pause à 64 %.** Un cadenas apparaît :
+   « Entre ton email pour finir la génération ». Le visiteur ne quitte jamais la page.
+3. **Il reçoit un code à 6 chiffres par email, le tape → compte créé, la génération
+   reprend** (`POST /api/generate`, qui
    refuse tout appel sans session) puis redirige vers `/result/[id]`.
 4. **`/result/[id]` :**
    - gratuit : le profil chiffré (heures par mois, taux horaire à atteindre,
@@ -59,6 +59,23 @@ Rien d'autre dans l'application n'a besoin de changer.
 que son rang et son score : ni le nom ni le contenu ne sont dans le HTML ni dans la
 charge utile React. Le flou n'est que le signal visuel.
 
+## Connexion sans mot de passe
+
+Email → code à 6 chiffres → connecté. Inscription et connexion sont **un seul
+parcours** : le compte est créé à la première vérification de code. Plus de mot de
+passe, donc plus de « mot de passe oublié ».
+
+- Code valable 10 minutes, utilisable une seule fois, mort après 5 erreurs.
+- Stocké uniquement sous forme d'empreinte HMAC (clé `AUTH_SECRET`, liée à l'email).
+- Limites : 4 codes par email et 10 par réseau toutes les 10 minutes.
+- Réponse identique que le compte existe ou non.
+- Envoi par **Resend** (`src/lib/email.ts`, appel HTTP direct). En local sans
+  `RESEND_API_KEY`, le code s'affiche dans le formulaire et la console.
+
+**Resend en test :** sans domaine vérifié, l'expéditeur `onboarding@resend.dev`
+n'envoie **qu'à l'email de ton compte Resend**. Pour envoyer à tout le monde, vérifie
+ton domaine dans Resend et renseigne `EMAIL_FROM`.
+
 ## Ajouter une question
 
 `src/lib/questions.ts` : l'ajouter à `QUESTIONS`, au type `Answers` et au schéma zod.
@@ -84,6 +101,8 @@ ouvrir `/admin`.
 | --- | --- | --- |
 | `AUTH_SECRET` | **oui en prod** | Signature des sessions. 32 caractères minimum (`openssl rand -base64 48`). |
 | `DATABASE_URL` | **oui en prod** | Postgres (Supabase, Neon, Vercel Postgres…). Tables créées au premier appel, préfixées `sb_`. Sur Supabase, prendre la chaîne « Transaction pooler » (port 6543). |
+| `RESEND_API_KEY` | **oui en prod** | Envoi des codes de connexion (resend.com). Sans elle, personne ne peut se connecter. |
+| `EMAIL_FROM` | recommandé | Expéditeur, ex. `ScaleBiz <code@ton-domaine.fr>` (domaine vérifié dans Resend). |
 | `ADMIN_EMAILS` | pour `/admin` | Emails autorisés, séparés par des virgules. |
 | `NEXT_PUBLIC_SITE_URL` | recommandé | Métadonnées, sitemap, robots.txt. |
 
@@ -101,7 +120,7 @@ src/
 │   ├── dashboard/            mes plans
 │   ├── pricing/  faq/  legal/
 │   ├── admin/                inscrits + changement d'offre manuel
-│   └── api/                  auth, generate, admin/plan, health
+│   └── api/                  auth (request-code, verify-code), generate, admin/plan, health
 ├── components/
 │   ├── Onboarding.tsx        questions → génération → pause + compte → résultat
 │   ├── BusinessCard.tsx      carte débloquée / verrouillée
@@ -112,12 +131,13 @@ src/
     ├── profile.ts            heures/mois, taux horaire, niveau d'ambition
     ├── businesses.ts         les 5 business + classement  ← à remplir
     ├── plans.ts              les offres                   ← prix provisoires
+    ├── email.ts              envoi des codes (Resend)
     ├── db.ts  auth.ts  rate-limit.ts  setup.ts  admin.ts
 ```
 
 ## Sécurité
 
-- Mots de passe hachés en scrypt, session JWT en cookie `httpOnly`.
+- Aucun mot de passe : codes à usage unique hachés, session JWT en cookie `httpOnly`.
 - Réponses validées côté serveur ; un résultat appartenant à un autre compte répond 404.
 - Changement d'offre réservé aux emails de `ADMIN_EMAILS`, revérifié par la route.
 
@@ -126,5 +146,5 @@ src/
 - [ ] Rédiger les 5 business
 - [ ] Brancher le paiement (abonnement mensuel)
 - [ ] Définir précisément ce que chaque offre débloque en plus des business
-- [ ] Réinitialisation de mot de passe, vérification d'email
+- [x] Connexion par code email (remplace les mots de passe)
 - [ ] Compléter les pages légales (éditeur, contact, juridiction)

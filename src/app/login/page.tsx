@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { AuthForm } from "@/components/AuthForm";
+import { EmailCodeForm } from "@/components/EmailCodeForm";
 import { Logo } from "@/components/Logo";
 import { currentUser } from "@/lib/auth";
 
@@ -30,14 +30,15 @@ export default async function LoginPage({
 
         <div className="surface p-7 sm:p-9">
           <h1 className="font-display text-[25px] font-semibold tracking-tight text-white">
-            Content de te revoir
+            Connexion
           </h1>
           <p className="mt-2 text-[13.5px] leading-relaxed text-ink-400">
-            Connecte-toi pour retrouver tes plans.
+            Entre ton email : on t&apos;envoie un code à 6 chiffres. Pas encore de compte ? Il est créé
+            automatiquement.
           </p>
 
           <div className="mt-7">
-            <AuthForm mode="login" next={target} />
+            <EmailCodeForm next={target} submitLabel="Me connecter" />
           </div>
         </div>
       </div>
