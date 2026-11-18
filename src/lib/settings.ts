@@ -12,7 +12,7 @@
 
 import { getStore } from "./db";
 
-export type SettingKey = "RESEND_API_KEY" | "EMAIL_FROM" | "ADMIN_EMAILS";
+export type SettingKey = "ADMIN_EMAILS";
 
 const TTL_MS = 60_000;
 const cache = new Map<SettingKey, { value: string | null; at: number }>();

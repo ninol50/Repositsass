@@ -23,8 +23,8 @@ export default function PrivacyPage() {
       <LegalSection title="Données collectées">
         <ul className="list-disc space-y-2 pl-5">
           <li>
-            <strong className="text-white">Compte :</strong> adresse email. Aucun mot de passe : la connexion se
-            fait par un code à usage unique, valable 10 minutes, dont seule une empreinte est stockée.
+            <strong className="text-white">Compte :</strong> adresse email et empreinte du mot de passe
+            (hachée avec scrypt et un sel unique — le mot de passe en clair n&apos;est jamais stocké).
           </li>
           <li>
             <strong className="text-white">Contenu :</strong> tes réponses au questionnaire (âge, temps
@@ -64,7 +64,6 @@ export default function PrivacyPage() {
         <ul className="list-disc space-y-2 pl-5">
           <li>Hébergement de l&apos;application : <Placeholder>[Vercel ou ton hébergeur]</Placeholder></li>
           <li>Base de données : <Placeholder>[Neon, Vercel Postgres, ...]</Placeholder></li>
-          <li>Envoi des codes de connexion par email : Resend</li>
           <li>Paiement : <Placeholder>[prestataire de paiement, à définir]</Placeholder></li>
         </ul>
       </LegalSection>

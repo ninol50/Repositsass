@@ -118,7 +118,8 @@ export default async function AdminPage() {
         )}
 
         <p className="mt-8 text-[12.5px] leading-relaxed text-ink-600">
-          Aucun mot de passe n&apos;est stocké : les comptes se connectent par un code envoyé par email.
+          Les mots de passe ne sont jamais lisibles, ici comme ailleurs : seule leur empreinte scrypt
+          est stockée, et elle ne sort pas de la base.
         </p>
       </main>
 

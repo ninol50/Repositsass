@@ -34,8 +34,8 @@ export default function TermsPage() {
 
       <LegalSection title="3. Compte utilisateur">
         <p>
-          La création d&apos;un compte requiert une adresse email valide, confirmée par un code à usage
-          unique envoyé à cette adresse. Tu es responsable de l&apos;accès à ta boîte email et de toute activité effectuée depuis ton
+          La création d&apos;un compte requiert une adresse email valide et un mot de passe. Tu es
+          responsable de la confidentialité de tes identifiants et de toute activité effectuée depuis ton
           compte. Un compte par personne ; les comptes partagés peuvent être suspendus.
         </p>
       </LegalSection>

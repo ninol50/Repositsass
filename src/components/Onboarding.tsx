@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { QUESTIONS, questionError, type Answers, type QuestionId } from "@/lib/questions";
-import { EmailCodeForm } from "./EmailCodeForm";
+import { AuthForm } from "./AuthForm";
 import { Alert, LockIcon, cx } from "./ui";
 
 /**
@@ -73,6 +73,7 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
   const [progress, setProgress] = useState(0);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [authMode, setAuthMode] = useState<"signup" | "login">("signup");
   const restored = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -266,17 +267,23 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
               </span>
               <div>
                 <h2 className="font-display text-[20px] font-semibold tracking-tight text-white">
-                  Entre ton email pour finir la génération
+                  {authMode === "signup" ? "Crée ton compte pour finir la génération" : "Connecte-toi pour finir la génération"}
                 </h2>
                 <p className="mt-1 text-[13.5px] leading-relaxed text-ink-400">
-                  Tu reçois un code, et ton compte est créé. Tes réponses sont gardées et ton plan sera
-                  enregistré dans ton espace.
+                  Tes réponses sont gardées. Ton plan sera enregistré dans ton espace, tu pourras y revenir
+                  quand tu veux.
                 </p>
               </div>
             </div>
 
             <div className="mt-6">
-              <EmailCodeForm submitLabel="Valider et voir mon plan" onSuccess={() => setPhase("finishing")} />
+              <AuthForm
+                key={authMode}
+                mode={authMode}
+                submitLabel={authMode === "signup" ? "Créer mon compte et continuer" : "Me connecter et continuer"}
+                onSwitchMode={() => setAuthMode((m) => (m === "signup" ? "login" : "signup"))}
+                onSuccess={() => setPhase("finishing")}
+              />
             </div>
           </div>
         )}

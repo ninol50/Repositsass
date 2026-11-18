@@ -12,6 +12,8 @@ export function isPlan(value: unknown): value is Plan {
 export type User = {
   id: string;
   email: string;
+  /** null for the few accounts created when sign-in was by emailed code. */
+  passwordHash: string | null;
   plan: Plan;
   /** Who set the plan: "admin", later the payment provider. */
   planSource: string | null;
@@ -20,7 +22,7 @@ export type User = {
   createdAt: string;
 };
 
-export type PublicUser = User & { isPaying: boolean };
+export type PublicUser = Omit<User, "passwordHash"> & { isPaying: boolean };
 
 /** One completed questionnaire. The result page is recomputed from the answers. */
 export type Generation = {
@@ -31,7 +33,8 @@ export type Generation = {
 };
 
 export function toPublicUser(u: User): PublicUser {
-  return { ...u, isPaying: hasActivePlan(u) };
+  const { passwordHash: _ignored, ...rest } = u;
+  return { ...rest, isPaying: hasActivePlan(u) };
 }
 
 export function hasActivePlan(u: Pick<User, "plan" | "planExpiresAt">): boolean {

@@ -15,7 +15,7 @@ const FAQ = [
   },
   {
     q: "Pourquoi faut-il créer un compte ?",
-    a: "Pour enregistrer ton plan et que tu puisses le retrouver à tout moment depuis ton espace. Le compte est gratuit : tu entres ton email, tu reçois un code à 6 chiffres, et c'est tout. Pas de mot de passe à retenir.",
+    a: "Pour enregistrer ton plan et que tu puisses le retrouver à tout moment depuis ton espace. Le compte est gratuit et ne demande qu'un email et un mot de passe.",
   },
   {
     q: "Qu'est-ce qui est gratuit ?",
