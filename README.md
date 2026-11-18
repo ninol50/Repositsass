@@ -47,12 +47,11 @@ s'applique qu'au mensuel.
 
 **Sans offre, rien n'est visible** : la page résultat ne montre qu'un cadenas et l'offre.
 
-**Après la génération, une seule offre est proposée** (`recommendedOffer`). **Pro est
-l'offre par défaut**, mise en avant comme « la plus avantageuse » (`BEST_VALUE`).
-Starter n'est proposé que si la personne fait tout elle-même **et** vise un petit
-objectif (≤ 1 500 €/mois, atteignable avec son temps). La raison affichée suit le
-profil. Déterministe : mêmes réponses, même offre. Le bouton « Découvrir les autres
-offres » montre l'autre.
+**Après la génération, une seule offre est proposée** (`recommendedOffer`) :
+automatisation choisie → Pro ; objectif de 5 000 €/mois ou plus → Pro ; sinon → Starter.
+La raison affichée suit le profil. Déterministe : mêmes réponses, même offre. Pro reste
+mis en avant comme « le plus avantageux » sur la page Offres (`BEST_VALUE`). Le bouton
+« Découvrir les autres offres » montre l'autre.
 
 **Prix de lancement** (`PROMO`) : pendant 5 minutes après la génération, le premier
 mois est à `launchPrice`. Le compte à rebours est réel (calculé par le serveur, il ne

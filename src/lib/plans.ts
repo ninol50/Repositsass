@@ -6,7 +6,6 @@
  * perk is a one-line edit.
  */
 
-import { computeProfile } from "./profile";
 import type { Answers } from "./questions";
 import type { Plan } from "./types";
 
@@ -163,38 +162,37 @@ export function formatPrice(euros: number): string {
 /* Recommendation                                                          */
 /* ---------------------------------------------------------------------- */
 
-/** Below this target, with no automation wanted, Starter is enough. */
-const STARTER_MAX_TARGET = 1500;
+/** From this monthly target on, Pro is proposed even without automation. */
+const PRO_FROM_TARGET = 5000;
 
 /**
- * The single offer shown after a generation.
- *
- * Pro is the default — the best value for most profiles. Starter is proposed
- * only when the answers clearly call for it: no automation wanted AND a
- * small, easily reachable target. Deterministic on purpose: the same answers
- * always get the same offer.
+ * The single offer shown after a generation:
+ *  - automation wanted → Pro (only Pro includes it);
+ *  - target of 5 000 €/month or more → Pro;
+ *  - otherwise → Starter.
+ * Deterministic: the same answers always get the same offer.
  */
 export function recommendedOffer(a: Answers): { offer: PlanOffer; reason: string } {
-  const profile = computeProfile(a);
   const pick = (id: PlanOffer["id"]) => OFFERS.find((o) => o.id === id)!;
 
-  if (!a.automate && profile.ambition === "accessible" && a.monthlyTarget <= STARTER_MAX_TARGET) {
+  if (a.automate) {
     return {
-      offer: pick("starter"),
-      reason: "Ton objectif est atteignable seul : ton plan complet et son guide pour démarrer simplement.",
+      offer: pick("pro"),
+      reason: "Tu veux qu'on automatise à ta place : seul Pro le fait, sur tous les business.",
     };
   }
 
-  // Pro: the reason follows what matters most in the answers.
-  let reason = "Le meilleur rapport pour toi : tous les business, automatisés à ta place.";
-  if (a.automate) {
-    reason = "Tu veux qu'on automatise à ta place : seul Pro le fait, sur tous les business.";
-  } else if (profile.ambition === "tres-ambitieux") {
-    reason = "Ton objectif est élevé : tous les business et les automatisations pour y arriver plus vite.";
-  } else if ((a.experience ?? 0) === 0) {
-    reason = "Tu débutes : tous nos guides et l'automatisation à ta place pour ne pas te perdre.";
-  } else if (a.hoursPerDay <= 2) {
-    reason = `Avec ${a.hoursPerDay} h par jour, il faut que ça tourne sans toi : Pro automatise à ta place.`;
+  if (a.monthlyTarget >= PRO_FROM_TARGET) {
+    const reason =
+      a.hoursPerDay <= 2
+        ? `Tu vises ${a.monthlyTarget.toLocaleString("fr-FR")} € par mois avec ${a.hoursPerDay} h par jour : il te faut tous les business et l'automatisation.`
+        : `Tu vises ${a.monthlyTarget.toLocaleString("fr-FR")} € par mois : tous les business et tous les guides pour y arriver.`;
+    return { offer: pick("pro"), reason };
   }
-  return { offer: pick("pro"), reason };
+
+  const reason =
+    (a.experience ?? 0) === 0
+      ? "Tu débutes : ton plan complet et son guide pas à pas pour te lancer."
+      : "Ton plan complet et son guide pour avancer à ton rythme.";
+  return { offer: pick("starter"), reason };
 }
