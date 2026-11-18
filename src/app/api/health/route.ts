@@ -30,7 +30,7 @@ export async function GET() {
             "Attendu : postgresql://utilisateur:motdepasse@hote:port/base — sans guillemets autour.",
         ],
       },
-      { status: 503 },
+      { status: 503, headers: { "Content-Type": "application/json; charset=utf-8" } },
     );
   }
 
@@ -81,6 +81,6 @@ export async function GET() {
       email: emailConfigured(),
       warnings,
     },
-    { status: warnings.length === 0 ? 200 : 503 },
+    { status: warnings.length === 0 ? 200 : 503, headers: { "Content-Type": "application/json; charset=utf-8" } },
   );
 }

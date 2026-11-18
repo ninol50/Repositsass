@@ -77,6 +77,8 @@ export function isDatabaseError(err: unknown): boolean {
   );
 }
 
+export const SUPABASE_TENANT_NOT_FOUND = /tenant(\/| or )user.*not found/i;
+
 const DATABASE_URL_MALFORMED =
   "DATABASE_URL est mal écrite. Forme attendue : postgresql://utilisateur:motdepasse@hote:port/base, " +
   "sans guillemets ni espaces. Si ton mot de passe contient @, #, /, ? ou %, il faut l'encoder " +
@@ -90,17 +92,17 @@ const DATABASE_URL_MALFORMED =
  * stays in the server logs: it can contain hostnames.
  */
 export function serverFailure(err: unknown, route: string): Response {
-  if (isDatabaseError(err)) return databaseFailure(err);
-
   const code = (err as { code?: string }).code;
   const message = err instanceof Error ? err.message : String(err);
-  console.error(`[${route}] erreur inattendue (code=${code ?? "aucun"}) : ${message}`);
+
+  if (!SUPABASE_TENANT_NOT_FOUND.test(message) && isDatabaseError(err)) return databaseFailure(err);
+  console.error(`[${route}] erreur (code=${code ?? "aucun"}) : ${message}`);
 
   // Supabase's pooler (Supavisor) answers XX000 "Tenant or user not found"
   // when the connection string does not match the project: wrong user name
   // (it must be postgres.<project-ref>), wrong region host, or a mix of the
   // direct and pooler strings.
-  if (/tenant or user not found/i.test(message)) {
+  if (SUPABASE_TENANT_NOT_FOUND.test(message)) {
     return Response.json(
       {
         error:

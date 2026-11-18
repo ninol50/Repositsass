@@ -417,6 +417,15 @@ class PostgresStore implements Store {
       if (code === "28P01") {
         return { ok: false, error: "Mot de passe incorrect dans DATABASE_URL (le placeholder [YOUR-PASSWORD] a-t-il bien été remplacé ?)." };
       }
+      if (/tenant(\/| or )user.*not found/i.test(message)) {
+        return {
+          ok: false,
+          error:
+            "Supabase ne trouve pas ce projet sur ce serveur (tenant/user not found). Le projet est en pause, " +
+            "ou la région de l'adresse ne correspond pas à celle du projet. Recopie la chaîne « Transaction pooler » " +
+            "depuis le bouton Connect de Supabase, sans rien modifier sauf [YOUR-PASSWORD].",
+        };
+      }
       if (code === "ENOTFOUND" || code === "ECONNREFUSED" || code === "ETIMEDOUT") {
         return { ok: false, error: `Base injoignable (${code}). Vérifie l'hôte et le port de DATABASE_URL.` };
       }
