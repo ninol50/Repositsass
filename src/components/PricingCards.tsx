@@ -140,8 +140,11 @@ export function OfferCard({
   badge,
   launchNote = false,
   hideMissing = false,
+  generationId,
 }: {
   offer: PlanOffer;
+  /** The questionnaire this choice comes from (launch price eligibility). */
+  generationId?: string;
   hideMissing?: boolean;
   billing?: Billing;
   /** True only while a just-generated plan's launch price is still running. */
@@ -176,6 +179,9 @@ export function OfferCard({
 
       <div className="mt-6">
         <PlanButton
+          offerId={offer.id}
+          billing={billing}
+          generationId={generationId}
           planName={billing === "yearly" ? `${offer.name} annuel` : offer.name}
           highlighted={featured}
           current={current}

@@ -14,7 +14,9 @@ export function OfferPicker({
   reason,
   promo,
   initiallyOpen = false,
+  generationId,
 }: {
+  generationId: string;
   recommendedId: PlanOffer["id"];
   reason: string;
   promo: boolean;
@@ -35,6 +37,7 @@ export function OfferPicker({
         <OfferCard
           offer={recommended}
           billing={billing}
+          generationId={generationId}
           hideMissing
           promo={promo}
           featured
@@ -59,6 +62,7 @@ export function OfferPicker({
               key={o.id}
               offer={o}
               billing={billing}
+              generationId={generationId}
               promo={promo}
               badge={o.id === BEST_VALUE ? "Le plus avantageux" : undefined}
             />

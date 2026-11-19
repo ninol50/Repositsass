@@ -28,6 +28,9 @@ export interface Store {
   getUserByEmail(email: string): Promise<User | null>;
   getUserById(id: string): Promise<User | null>;
   setPlan(userId: string, plan: Plan, source: string, expiresAt: string | null): Promise<void>;
+  /** Links the account to its Stripe customer and current subscription. */
+  setStripeIds(userId: string, customerId: string, subscriptionId: string | null): Promise<void>;
+  getUserByStripeCustomer(customerId: string): Promise<User | null>;
   createGeneration(userId: string, answers: Answers): Promise<Generation>;
   getGeneration(id: string): Promise<Generation | null>;
   listGenerations(userId: string, limit?: number): Promise<Generation[]>;
@@ -94,6 +97,8 @@ class MemoryStore implements Store {
       plan: "free",
       planSource: null,
       planExpiresAt: null,
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
       createdAt: new Date().toISOString(),
     };
     memoryState().users.set(user.id, user);
@@ -121,6 +126,18 @@ class MemoryStore implements Store {
     u.plan = plan;
     u.planSource = source;
     u.planExpiresAt = expiresAt;
+  }
+
+  async setStripeIds(userId: string, customerId: string, subscriptionId: string | null) {
+    const u = memoryState().users.get(userId);
+    if (!u) return;
+    u.stripeCustomerId = customerId;
+    if (subscriptionId) u.stripeSubscriptionId = subscriptionId;
+  }
+
+  async getUserByStripeCustomer(customerId: string) {
+    for (const u of memoryState().users.values()) if (u.stripeCustomerId === customerId) return u;
+    return null;
   }
 
   async createGeneration(userId: string, answers: Answers) {
@@ -191,6 +208,8 @@ function rowToUser(r: SqlRow): User {
     plan: String(r.plan) as Plan,
     planSource: r.plan_source ? String(r.plan_source) : null,
     planExpiresAt: r.plan_expires_at ? new Date(String(r.plan_expires_at)).toISOString() : null,
+    stripeCustomerId: r.stripe_customer_id ? String(r.stripe_customer_id) : null,
+    stripeSubscriptionId: r.stripe_subscription_id ? String(r.stripe_subscription_id) : null,
     createdAt: new Date(String(r.created_at)).toISOString(),
   };
 }
@@ -247,6 +266,11 @@ class PostgresStore implements Store {
     // the column must accept them, and they set one on their next sign-up.
     await sql`ALTER TABLE sb_users ALTER COLUMN password_hash DROP NOT NULL`;
 
+    // Stripe: added with the payment, so ALTER rather than CREATE.
+    await sql`ALTER TABLE sb_users ADD COLUMN IF NOT EXISTS stripe_customer_id text`;
+    await sql`ALTER TABLE sb_users ADD COLUMN IF NOT EXISTS stripe_subscription_id text`;
+    await sql`CREATE INDEX IF NOT EXISTS sb_users_stripe_customer_idx ON sb_users(stripe_customer_id)`;
+
     // Supabase publishes every table of the public schema through its REST
     // API (anon key). Row Level Security with no policy closes that door; the
     // app itself connects as the table owner, which RLS does not restrict.
@@ -301,6 +325,21 @@ class PostgresStore implements Store {
     await this.sql`
       UPDATE sb_users SET plan = ${plan}, plan_source = ${source}, plan_expires_at = ${expiresAt}
       WHERE id = ${userId}`;
+  }
+
+  async setStripeIds(userId: string, customerId: string, subscriptionId: string | null) {
+    await this.init();
+    await this.sql`
+      UPDATE sb_users
+      SET stripe_customer_id = ${customerId},
+          stripe_subscription_id = COALESCE(${subscriptionId}, stripe_subscription_id)
+      WHERE id = ${userId}`;
+  }
+
+  async getUserByStripeCustomer(customerId: string) {
+    await this.init();
+    const rows = await this.sql`SELECT * FROM sb_users WHERE stripe_customer_id = ${customerId} LIMIT 1`;
+    return rows[0] ? rowToUser(rows[0]) : null;
   }
 
   async createGeneration(userId: string, answers: Answers) {

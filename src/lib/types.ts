@@ -19,6 +19,10 @@ export type User = {
   planSource: string | null;
   /** null = no end date. */
   planExpiresAt: string | null;
+  /** Stripe customer, once they have been to checkout. */
+  stripeCustomerId: string | null;
+  /** The Stripe subscription that currently drives the plan. */
+  stripeSubscriptionId: string | null;
   createdAt: string;
 };
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/LogoutButton";
+import { ManageSubscriptionButton } from "@/components/ManageSubscriptionButton";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ButtonLink } from "@/components/ui";
@@ -48,6 +49,19 @@ export default async function DashboardPage() {
             <LogoutButton />
           </div>
         </header>
+
+        {user.stripeCustomerId && (
+          <div className="mt-8 flex flex-col gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[14px] text-ink-200">
+              {plan === "free"
+                ? "Ton abonnement est terminé. Tu peux le reprendre à tout moment."
+                : user.planExpiresAt
+                  ? `Offre ${planLabel(plan)} active, prochaine échéance vers le ${new Date(user.planExpiresAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}.`
+                  : `Offre ${planLabel(plan)} active.`}
+            </p>
+            <ManageSubscriptionButton />
+          </div>
+        )}
 
         {plan === "free" && (
           <div className="mt-8 flex flex-col gap-3 rounded-2xl border border-gold-400/25 bg-gold-400/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between">

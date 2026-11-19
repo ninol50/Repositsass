@@ -78,6 +78,37 @@ export function GenerationScreen({
 }) {
   const lines = useMemo(() => buildLines(answers), [answers]);
   const recommended = useMemo(() => recommendedOffer(answers), [answers]);
+  const [unlocking, setUnlocking] = useState(false);
+  const [unlockError, setUnlockError] = useState<string | null>(null);
+
+  /** Straight to Stripe Checkout for the recommended offer (monthly). */
+  async function unlock() {
+    if (!result) return;
+    setUnlocking(true);
+    setUnlockError(null);
+    try {
+      const res = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          offer: recommended.offer.id,
+          billing: "monthly",
+          generationId: result.id,
+          returnPath: `/result/${result.id}`,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (res.ok && data.url) {
+        onLeave();
+        window.location.href = data.url;
+        return;
+      }
+      setUnlockError(data.error ?? "Le paiement n'a pas pu s'ouvrir. Réessaie.");
+    } catch {
+      setUnlockError("Connexion impossible. Vérifie ta connexion internet et réessaie.");
+    }
+    setUnlocking(false);
+  }
   const visible = lines.filter((l) => l.at <= progress);
   const logRef = useRef<HTMLDivElement>(null);
   const locked = phase === "locked";
@@ -274,13 +305,19 @@ export function GenerationScreen({
                 <p className="mt-1 text-[12.5px] font-medium text-gold-300">
                   le premier mois, puis {formatPrice(recommended.offer.monthlyPrice)} / mois
                 </p>
-                <Link
-                  href={`/result/${result.id}#offres`}
-                  onClick={onLeave}
-                  className="mt-4 flex h-14 w-full items-center justify-center rounded-2xl bg-[linear-gradient(120deg,#fbbf24,#f59e0b)] text-[16px] font-bold text-ink-950 shadow-[0_10px_40px_-10px_rgba(251,191,36,0.8)] transition-all hover:brightness-110 active:scale-[0.99]"
+                <button
+                  type="button"
+                  disabled={unlocking}
+                  onClick={unlock}
+                  className="mt-4 flex h-14 w-full items-center justify-center rounded-2xl bg-[linear-gradient(120deg,#fbbf24,#f59e0b)] text-[16px] font-bold text-ink-950 shadow-[0_10px_40px_-10px_rgba(251,191,36,0.8)] transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-70"
                 >
-                  Débloquer avec {recommended.offer.name}
-                </Link>
+                  {unlocking ? "Ouverture du paiement…" : `Débloquer avec ${recommended.offer.name}`}
+                </button>
+                {unlockError && (
+                  <p className="mt-2 text-center text-[12.5px] text-red-300" role="alert">
+                    {unlockError}
+                  </p>
+                )}
                 <Link
                   href={`/result/${result.id}?offres=toutes#offres`}
                   onClick={onLeave}

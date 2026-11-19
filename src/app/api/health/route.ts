@@ -1,3 +1,4 @@
+import { stripeConfigured } from "@/lib/stripe";
 import { adminConfigured } from "@/lib/admin";
 import { describeDatabase, getStore, storageDriver } from "@/lib/db";
 
@@ -60,6 +61,13 @@ export async function GET() {
       warnings.push(`Création des tables impossible${code ? ` (code ${code})` : ""} : ${message.slice(0, 200)}`);
     }
   }
+  const stripeStatus = await stripeConfigured().catch(() => ({ secret: false, webhook: false }));
+  if (!stripeStatus.secret) {
+    warnings.push("STRIPE_SECRET_KEY absente : le paiement est désactivé.");
+  }
+  if (!stripeStatus.webhook) {
+    warnings.push("STRIPE_WEBHOOK_SECRET absent : les renouvellements et résiliations ne sont pas suivis.");
+  }
   if (!(await adminConfigured())) {
     warnings.push("ADMIN_EMAILS absent : la page /admin est inaccessible.");
   }
@@ -75,6 +83,7 @@ export async function GET() {
       database: db
         ? { host: db.host, port: db.port, pooled: db.pooled, reachable: ping.ok, tablesReady, ...(ping.ok ? { latencyMs: ping.latencyMs } : {}) }
         : null,
+      stripe: stripeStatus,
       warnings,
     },
     { status: warnings.length === 0 ? 200 : 503, headers: { "Content-Type": "application/json; charset=utf-8" } },

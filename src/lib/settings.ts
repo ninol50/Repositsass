@@ -12,7 +12,7 @@
 
 import { getStore } from "./db";
 
-export type SettingKey = "ADMIN_EMAILS";
+export type SettingKey = "ADMIN_EMAILS" | "STRIPE_SECRET_KEY" | "STRIPE_WEBHOOK_SECRET";
 
 const TTL_MS = 60_000;
 const cache = new Map<SettingKey, { value: string | null; at: number }>();

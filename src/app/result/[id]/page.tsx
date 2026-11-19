@@ -109,7 +109,13 @@ export default async function ResultPage({
           </section>
 
           <section id="offres" className="mt-12 scroll-mt-20">
-            <OfferPicker recommendedId={offer.id} reason={reason} promo={promo} initiallyOpen={offres === "toutes"} />
+            <OfferPicker
+              recommendedId={offer.id}
+              reason={reason}
+              promo={promo}
+              initiallyOpen={offres === "toutes"}
+              generationId={generation.id}
+            />
           </section>
         </main>
         <SiteFooter />

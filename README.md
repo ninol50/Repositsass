@@ -62,8 +62,38 @@ doit facturer `launchPrice` uniquement tant que `promoActive()` est vrai.
 
 Les comptes réglés sur l'ancienne offre « elite » sont lus comme Pro.
 
-**Le paiement n'est pas branché.** En attendant, une offre s'accorde à la main depuis
-**`/admin`** (colonne « Offre »).
+### Paiement : Stripe (`src/lib/stripe.ts`)
+
+Sans SDK : quelques appels HTTPS et la vérification de signature des webhooks.
+
+- **« Choisir » / « Débloquer »** → `POST /api/billing/checkout` → page Stripe Checkout
+  (abonnement). Le prix de lancement est un coupon d'un mois, ajouté **uniquement** si le
+  serveur voit que le compte à rebours du questionnaire de ce compte court encore, et
+  seulement en mensuel.
+- **Retour de paiement** → `/merci` relit la session chez Stripe, vérifie qu'elle
+  appartient au compte connecté, puis applique l'abonnement : l'accès s'ouvre sans
+  attendre le webhook.
+- **Webhook** `POST /api/webhooks/stripe` (signature HMAC vérifiée, horodatage ≤ 5 min) :
+  checkout terminé, factures, création/mise à jour/suppression d'abonnement. Chaque
+  événement relit l'abonnement chez Stripe (`syncSubscription`) : idempotent et insensible
+  à l'ordre d'arrivée.
+- **« Gérer mon abonnement »** (Mon espace) → portail client Stripe : changer d'offre,
+  carte, résiliation. Un compte déjà abonné ne peut pas ouvrir un second checkout.
+- L'accès dure jusqu'à la fin de la période payée + 3 jours de marge.
+
+Configuration Stripe attendue (mode test puis live, mêmes noms) :
+
+| Élément | Identifiant |
+| --- | --- |
+| Prix (lookup keys) | `scalebiz_starter_monthly`, `scalebiz_starter_yearly`, `scalebiz_pro_monthly`, `scalebiz_pro_yearly` |
+| Coupons du 1er mois (durée : une fois) | `scalebiz_launch_starter` (−5,01 €), `scalebiz_launch_pro` (−7,01 €) |
+| Webhook | `https://<domaine>/api/webhooks/stripe` |
+
+Secrets (variable d'environnement **ou** table privée `sb_settings`) : `STRIPE_SECRET_KEY`,
+`STRIPE_WEBHOOK_SECRET`. `STRIPE_API_URL` ne sert qu'aux tests (faux Stripe local).
+
+Une offre peut toujours s'accorder à la main depuis **`/admin`** ; un paiement Stripe ne
+retire jamais une offre accordée à la main.
 
 ## Les 5 business (`src/lib/businesses.ts`)
 
